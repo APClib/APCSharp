@@ -1,9 +1,9 @@
 <div align="center">
- <img src="assets/logo.png" width="66%"/>
+ <img src="assets/logo.png" width="33%"/>
  <h1>
   <em>APC#</em>
  </h1>
-    <p><em>(Yet)</em> <b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library for building optimized and flexible parsers.</p>
+    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library for building optimized and flexible parsers.</p>
 </div>
 
 
