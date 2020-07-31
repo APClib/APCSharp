@@ -1,9 +1,7 @@
 <div align="center">
- <img src="assets/logo.png" width="66%"/>
- <h1>
-  <em>APC#</em>
- </h1>
-    <p><em>(Yet)</em> <b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library for building optimized and flexible parsers.</p>
+ <img src="assets/logo.png" width="33%"/>
+    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library <br>
+     for building optimized and flexible parsers.</p>
 </div>
 
 
@@ -16,4 +14,3 @@ This C# code below, creates a new parser, then using the `Run(input)` method to 
 ```c#
 // Code...
 ```
-
