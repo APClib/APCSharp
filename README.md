@@ -1,6 +1,7 @@
 <div align="center">
  <img src="assets/logo.png" width="33%"/>
-    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library for building optimized and flexible parsers.</p>
+    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library <br>
+     for building optimized and flexible parsers.</p>
 </div>
 
 
