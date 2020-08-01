@@ -1,4 +1,5 @@
 ﻿using System;
+using APCSharp;
 
 namespace Demo
 {
@@ -6,7 +7,9 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Parser p = Parser.String("Ala");
+            PResult r = p.RunSafe("Alla");
+            Console.WriteLine(r);
         }
     }
 }
