@@ -8,9 +8,19 @@
 
 
 
+
 ## Examples
 This C# code below, creates a new parser, then using the `Run(input)` method to parse the input expression, and generate an AST.
 
 ```c#
 // Code...
 ```
+
+
+
+## Facts
+
+| Description  | Value |
+| ------------ | ----- |
+| Package Size | 11 kB |
+| Semi-colons  | < 100 |
