@@ -49,9 +49,22 @@ PResult { Status: Succeeded, Remaining: "", AST:
 
 
 
-## Facts
+## Specification
 
-| Description  | Value |
-| ------------ | ----- |
-| Package Size | 11 kB |
-| Semi-colons  | < 100 |
+| Description  | Value         |
+| ------------ | ------------- |
+| Framework    | .NET Core 3.1 |
+| Package Size | 18 kB         |
+| Semi-colons  | < 200         |
+
+
+
+## Want to help?
+
+All help is verry much appreciated! You can fork the repo right now and start building your own version right away, and if you happen to create something interesting and useful, don't hesitate to file a pull request!
+
+### Sponsor this project
+
+You can also help by supporting the project financially, all gifts are appreciate with great reverence and gratitude.
+
+Developer: [paypal.me/williamragstad](http://paypal.me/williamragstad)
