@@ -65,6 +65,6 @@ All help is verry much appreciated! You can fork the repo right now and start bu
 
 ### Sponsor this project
 
-You can also help by supporting the project financially, all gifts are appreciate with great reverence and gratitude.
+You can also help by supporting the project financially, all gifts are appreciated with great reverence and gratitude.
 
 Developer: [paypal.me/williamragstad](http://paypal.me/williamragstad)
