@@ -29,7 +29,7 @@ Console.WriteLine(r);
 ```
 This produces the following output AST:
 
-```json
+```text
 PResult { Status: Succeeded, Remaining: "", AST:
     Node { Type: List, Children:
         Node { Type: List, Children:
