@@ -1,11 +1,24 @@
 <div align="center">
  <img src="assets/logo.png" width="33%"/>
     <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library <br>
-     for building optimized and flexible parsers.</p>
+     for building optimized and flexible parsers.</p><br>
+ <img alt="Nuget" src="https://img.shields.io/nuget/v/APCSharp">
+ <img alt="Nuget" src="https://img.shields.io/nuget/dt/APCSharp">
 </div>
 
 
 
+## Install
+
+APC# is embedded directly into your C# program, without the need for any additional tools or build-time code generation tasks.
+
+Simply install it by clicking on *Dependencies > Manage NuGet Packages > Browse* and search for **APC#**.
+
+*Or* type command below in your .NET CLI:
+
+```bash
+dotnet add package APCSharp
+```
 
 
 

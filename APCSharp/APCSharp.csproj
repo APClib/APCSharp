@@ -1,7 +1,28 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>APCSharp</PackageId>
+    <Authors>William Rågstad</Authors>
+    <Product>APC#</Product>
+    <Company />
+    <Description>Another Parser Combinator for C# is a library
+for building optimized and flexible parsers.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/WilliamRagstad/APCSharp</PackageProjectUrl>
+    <PackageIcon>logo_white_outline_transparent.png</PackageIcon>
+    <PackageIconUrl />
+    <RepositoryUrl>https://github.com/WilliamRagstad/APCSharp</RepositoryUrl>
+    <RepositoryType>GitHub</RepositoryType>
+    <PackageTags>parser, parsing, language, compiler, combinator, another, APC#</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\assets\logo_white_outline_transparent.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>
