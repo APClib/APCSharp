@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace APCSharp
+namespace APCSharp.Parser.Data
 {
     internal static class SharedData
     {

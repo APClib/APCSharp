@@ -1,4 +1,4 @@
-﻿namespace APCSharp
+﻿namespace APCSharp.Parser.Data
 {
     internal class LineColumn
     {

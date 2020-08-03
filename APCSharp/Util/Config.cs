@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace APCSharp
+namespace APCSharp.Util
 {
     public static class Config
     {

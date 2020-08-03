@@ -10,10 +10,41 @@
 
 
 ## Examples
-This C# code below, creates a new parser, then using the `Run(input)` method to parse the input expression, and generate an AST.
+This C# code below, creates a new parser, then using the `Run()` method to parse the input expression, and generate an AST.
 
 ```c#
-// Code...
+Parser p = Parser.AnyOf(
+        Parser.String("Programming"),
+        Parser.String("Coding"),
+        Parser.Word // Any string containing letters
+    )
+    .FollowedBy(
+    	Parser.WhiteSpaces.Maybe() // Matches WhiteSpaces if there are any, else return an empty Node
+	).RemoveEmptyMaybeMatches()	// Removes all empty Nodes
+    .Many(); // Match every instance of: (<string/string/word> <whitespace?>)+
+
+PResult r = p.Run(@"Coding
+  is   cool!");
+Console.WriteLine(r);
+```
+This produces the following output AST:
+
+```json
+PResult { Status: Succeeded, Remaining: "", AST:
+    Node { Type: List, Children:
+        Node { Type: List, Children:
+            Node { Type: String, Value: "Coding" (System.String) }
+            Node { Type: WhiteSpace, Value: "\r\n  " (System.String) }
+        }
+        Node { Type: List, Children:
+            Node { Type: Word, Value: "is" (System.String) }
+            Node { Type: WhiteSpace, Value: "   " (System.String) }
+        }
+        Node { Type: List, Children:
+            Node { Type: Word, Value: "cool" (System.String) }
+        }
+    }
+}
 ```
 
 

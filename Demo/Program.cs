@@ -1,5 +1,5 @@
 ﻿using System;
-using APCSharp;
+using APCSharp.Parser;
 
 namespace Demo
 {
@@ -7,9 +7,27 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            Parser p = Parser.String("Ala");
-            PResult r = p.RunSafe("Alla");
-            Console.WriteLine(r);
+
+            Parser p =
+                Parser.AnyOf(
+                    Parser.String("Programming"),
+                    Parser.String("Coding"),
+                    Parser.Word
+                 )
+                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().Many();
+
+            PResult r = p.Run(@"Coding
+  is   cool!");
+            
+            /*
+            Parser p = Parser.Integer;
+
+            PResult r = p.Run(@"12Kodning
+is cool!");
+            */
+
+            if (r.Success) Console.WriteLine(r); 
+            else Console.WriteLine(r.ErrorMessage);
         }
     }
 }
