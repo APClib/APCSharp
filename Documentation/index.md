@@ -20,4 +20,4 @@ Great! We'd recommend you to take a look at how you can [get started](articles/g
 
 All help is very much appreciated! You can fork the repo right now and start building your own version right away, and if you happen to create something interesting and useful, don't hesitate to file a pull request!
 
-See the project at [GitHub](https://github.com/WilliamRagstad/APCSharp).
+See the project at [GitHub](https://github.com/WilliamRagstad/APCSharp) or at [NuGet](https://www.nuget.org/packages/APCSharp/).
