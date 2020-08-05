@@ -1,5 +1,5 @@
 <div align="center">
- <img src="assets/logo.png" width="33%"/>
+ <img src="/assets/logo.png" width="33%"/>
     <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library <br>
      for building optimized and flexible parsers.</p><br>
  <img alt="Nuget" src="https://img.shields.io/nuget/v/APCSharp">

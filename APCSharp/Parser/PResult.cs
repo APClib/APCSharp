@@ -2,7 +2,7 @@
 {
     public class PResult
     {
-        public static PResult Empty => Succeeded(Node.Empty, string.Empty);
+        public static PResult Empty(string rest) => Succeeded(Node.Empty, rest);
         public static PResult Unknown => Failed("Unknown", string.Empty);
         public static PResult Failed(string errorMsg, string rest) => new PResult(errorMsg, rest);
         public static PResult Succeeded(Node node, string rest) => new PResult(true, node, rest);

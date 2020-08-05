@@ -31,8 +31,20 @@ namespace APCSharp.Parser
         }
 
         #region Preset Parsers
-
+        /// <summary>
+        /// Accepts character if in range of n and m.
+        /// </summary>
+        /// <param name="n">Lower character bound</param>
+        /// <param name="m">Upper character bound></param>
+        /// <returns>Parser for any character between n and m</returns>
         public static ParserBuilder InRange(char n, char m) => InRange(n, m, NodeType.Char);
+        /// <summary>
+        /// Accepts character if in range of n and m and set a custom named NodeType.
+        /// </summary>
+        /// <param name="n">Lower character bound</param>
+        /// <param name="m">Upper character bound></param>
+        /// <param name="charType">Named type of matched character</param>
+        /// <returns>Parser for any character between n and m</returns>
         public static ParserBuilder InRange(char n, char m, NodeType charType)
         {
             ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m, null);

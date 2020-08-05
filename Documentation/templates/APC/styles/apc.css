@@ -1,0 +1,42 @@
+:root {
+  --header-standard-height: 50px;
+  /* Don't change this value */
+  --header-min-height: 69px;
+  --logo-height: 103px;
+  --logo-padding: 20px;
+  --navbar-background: url("../images/doc-banner.png");
+}
+
+#logo {
+  padding: var(--logo-padding);
+  height: var(--logo-height);
+  margin-top: calc(var(--logo-height) / -2 + calc(var(--header-standard-height) / 2) - calc(var(--logo-padding) / 2));
+}
+
+#autocollapse {
+  padding-top: calc(var(--header-min-height) - var(--header-standard-height));
+  background: var(--navbar-background);
+  background-size: cover;
+}
+
+.nav.level1.navbar-nav>li>a,
+.nav.level1.navbar-nav>li>a:hover {
+  background: transparent;
+}
+
+.container.body-content.hide-when-search,
+.sidetoc.shiftup,
+.sidefilter,
+.sidetoc,
+.contribution {
+  margin-top: calc(var(--header-min-height) - var(--header-standard-height));
+}
+
+/*  Hamburger Button  */
+.navbar-inverse .navbar-toggle:focus,
+.navbar-inverse .navbar-toggle:hover {
+  background-color: #ffffff82;
+}
+.navbar-inverse .navbar-toggle .icon-bar {
+  background-color: #ffffff;
+}

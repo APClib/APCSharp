@@ -12,9 +12,19 @@ namespace Demo
                 Parser.AnyOf(
                     Parser.String("Programming"),
                     Parser.String("Coding"),
-                    Parser.Word
+                    Parser.Word,
+                    Parser.AnyOf(
+                        Parser.Char('!'),
+                        Parser.Char('?'),
+                        Parser.Char('.')
+                    )
                  )
-                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().Many();
+                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().Many()
+                .FollowedBy(Parser.AnyOf(
+                    Parser.Char('!'),
+                    Parser.Char('?'),
+                    Parser.Char('.')
+                ));
 
             PResult r = p.Run(@"Coding
   is   cool!");

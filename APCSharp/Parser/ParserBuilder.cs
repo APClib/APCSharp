@@ -125,7 +125,7 @@ namespace APCSharp.Parser
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
                 if (p.Success) return p;
-                else return PResult.Empty;
+                else return PResult.Empty(p.Remaining);
             });
         }
 
