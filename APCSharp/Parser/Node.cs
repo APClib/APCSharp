@@ -1,8 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
+    /// <summary>
+    /// Default NodeType, should be sufficient for most parsers.
+    /// </summary>
     public enum NodeType
     {
         /// <summary>
@@ -47,69 +51,78 @@ namespace APCSharp.Parser
         /// </summary>
         Number
     }
-    /// <summary>
-    /// AST Node.
-    /// </summary>
-    public class Node
+    public class Node<T> where T : struct, IConvertible
     {
-        /// <summary>
-        /// List Node.
-        /// </summary>
-        /// <param name="nodes">Childnodes</param>
-        /// <returns>Node with childnodes</returns>
-        public static Node List(params Node[] nodes) => new Node(NodeType.List, null, nodes);
-        /// <summary>
-        /// Empty Node.
-        /// </summary>
-        public static Node Empty = new Node(NodeType.Empty, string.Empty);
-        /// <summary>
-        /// Corrupted Node.
-        /// </summary>
-        public static Node Corrupted = new Node(NodeType.Corrupted, null);
         /// <summary>
         /// Create a new Node.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
         /// <param name="children">Any childnodes</param>
-        public Node(NodeType type, dynamic value, params Node[] children)
+        public Node(T type, dynamic value, params Node<T>[] children)
         {
+            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+
             Type = type;
             Value = value;
-            Children = new List<Node>(children);
+            Children = new List<Node<T>>(children);
+        }
+        /// <summary>
+        /// Create a new Node but leave value control to subclasses.
+        /// </summary>
+        /// <param name="type">Type of Node</param>
+        /// <param name="children">Any childnodes</param>
+        internal Node(T type, params Node<T>[] children)
+        {
+            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+
+            Type = type;
+            Children = new List<Node<T>>(children);
+        }
+        /// <summary>
+        /// Create a new Node without childnodes and leave value control to subclasses.
+        /// </summary>
+        /// <param name="type">Type of Node</param>
+        /// <param name="value">Value to hold</param>
+        internal Node(T type)
+        {
+            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+
+            Type = type;
+            Children = new List<Node<T>>();
         }
         /// <summary>
         /// Create a new Node without childnodes.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
-        public Node(NodeType type, dynamic value)
+        public Node(T type, dynamic value)
         {
+            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+
             Type = type;
             Value = value;
-            Children = new List<Node>();
+            Children = new List<Node<T>>();
         }
         /// <summary>
         /// Childnodes of current Node.
         /// </summary>
-        public List<Node> Children { get; }
+        public List<Node<T>> Children { get; }
         /// <summary>
         /// Node type.
         /// </summary>
-        public NodeType Type { get; internal set; }
+        public T Type { get; internal set; }
         /// <summary>
         /// Arbitrary Node value.
         /// </summary>
-        public dynamic Value { get; }
+        public dynamic Value { get; internal set; }
+
         /// <summary>
-        /// String formatted Node representation.
+        /// String formatted root Node representation.
         /// </summary>
-        /// <param name="indent">Indentation prefix</param>
-        /// <returns>String formatted Node representation</returns>
+        /// <returns>String formatted root Node representation.</returns>
         public string ToString(string indent)
         {
-            if (Type == NodeType.Corrupted) return indent + "Node { Type: Corrupted }";
-
             string result = indent + $"Node {{ Type: {Type}";
 
             if (Value != null) result += $", Value: \"{ValueToString()}\" ({Value.GetType().ToString()}) ";
@@ -134,7 +147,51 @@ namespace APCSharp.Parser
         private string ValueToString()
         {
             string v = Value.ToString();
-            return v.ReplaceAll('\n', "\\n").ReplaceAll('\r',"\\r").ReplaceAll('\t',"\\t");
+            return v.ReplaceAll('\n', "\\n").ReplaceAll('\r', "\\r").ReplaceAll('\t', "\\t");
+        }
+    }
+
+    /// <summary>
+    /// Default AST Node.
+    /// </summary>
+    public class Node : Node<NodeType>
+    {
+        /// <summary>
+        /// List Node.
+        /// </summary>
+        /// <param name="nodes">Childnodes</param>
+        /// <returns>Node with childnodes</returns>
+        public static Node List(params Node[] nodes) => new Node(NodeType.List, null, nodes);
+        /// <summary>
+        /// Empty Node.
+        /// </summary>
+        public static Node Empty = new Node(NodeType.Empty, string.Empty);
+        /// <summary>
+        /// Corrupted Node.
+        /// </summary>
+        public static Node Corrupted = new Node(NodeType.Corrupted, null);
+        /// <summary>
+        /// Create a new Node.
+        /// </summary>
+        /// <param name="type">Type of Node</param>
+        /// <param name="value">Value to hold</param>
+        /// <param name="children">Any childnodes</param>
+        public Node(NodeType type, dynamic value, params Node[] children) : base(type, children) { Value = value; }
+        /// <summary>
+        /// Create a new Node without childnodes.
+        /// </summary>
+        /// <param name="type">Type of Node</param>
+        /// <param name="value">Value to hold</param>
+        public Node(NodeType type, dynamic value) : base(type) { Value = value; }
+        /// <summary>
+        /// String formatted Node representation.
+        /// </summary>
+        /// <param name="indent">Indentation prefix</param>
+        /// <returns>String formatted Node representation</returns>
+        public new string ToString(string indent)
+        {
+            if (Type == NodeType.Corrupted) return indent + "Node { Type: Corrupted }";
+            return base.ToString(indent);
         }
     }
 }
