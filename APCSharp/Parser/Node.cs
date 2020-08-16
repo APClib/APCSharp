@@ -51,7 +51,7 @@ namespace APCSharp.Parser
         /// </summary>
         Number
     }
-    public class Node<T> where T : struct, IConvertible
+    public class Node<TNode> where TNode : struct, IConvertible
     {
         /// <summary>
         /// Create a new Node.
@@ -59,59 +59,59 @@ namespace APCSharp.Parser
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
         /// <param name="children">Any childnodes</param>
-        public Node(T type, dynamic value, params Node<T>[] children)
+        public Node(TNode type, dynamic value, params Node<TNode>[] children)
         {
-            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+            if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
 
             Type = type;
             Value = value;
-            Children = new List<Node<T>>(children);
+            Children = new List<Node<TNode>>(children);
         }
         /// <summary>
         /// Create a new Node but leave value control to subclasses.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="children">Any childnodes</param>
-        internal Node(T type, params Node<T>[] children)
+        internal Node(TNode type, params Node<TNode>[] children)
         {
-            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+            if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
 
             Type = type;
-            Children = new List<Node<T>>(children);
+            Children = new List<Node<TNode>>(children);
         }
         /// <summary>
         /// Create a new Node without childnodes and leave value control to subclasses.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
-        internal Node(T type)
+        internal Node(TNode type)
         {
-            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+            if (!typeof(TNode).IsEnum) throw new ArgumentException("T must be an enumerated type");
 
             Type = type;
-            Children = new List<Node<T>>();
+            Children = new List<Node<TNode>>();
         }
         /// <summary>
         /// Create a new Node without childnodes.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
-        public Node(T type, dynamic value)
+        public Node(TNode type, dynamic value)
         {
-            if (!typeof(T).IsEnum) throw new ArgumentException("T must be an enumerated type");
+            if (!typeof(TNode).IsEnum) throw new ArgumentException("T must be an enumerated type");
 
             Type = type;
             Value = value;
-            Children = new List<Node<T>>();
+            Children = new List<Node<TNode>>();
         }
         /// <summary>
         /// Childnodes of current Node.
         /// </summary>
-        public List<Node<T>> Children { get; }
+        public List<Node<TNode>> Children { get; }
         /// <summary>
         /// Node type.
         /// </summary>
-        public T Type { get; internal set; }
+        public TNode Type { get; internal set; }
         /// <summary>
         /// Arbitrary Node value.
         /// </summary>
@@ -148,6 +148,13 @@ namespace APCSharp.Parser
         {
             string v = Value.ToString();
             return v.ReplaceAll('\n', "\\n").ReplaceAll('\r', "\\r").ReplaceAll('\t', "\\t");
+        }
+
+
+        public static implicit operator Node(Node<TNode> n)
+        {
+            if (n.GetType().Equals(typeof(Node<NodeType>))) return n as Node;
+            throw new ArgumentException("Cannot cast Node<" + typeof(TNode).Name + "> to Node! Must be Node<NodeType>");
         }
     }
 

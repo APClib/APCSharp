@@ -2,21 +2,23 @@
 
 namespace APCSharp.Parser
 {
-    public class Parser
+    public class Parser<TNode> where TNode : struct, IConvertible
     {
-        internal Func<string, PResult> func;
-        public PResult Run(string s) => func(s);
+        internal Func<string, PResult<TNode>> func;
+        public PResult<TNode> Run(string s) => func(s);
 
-        public Parser(Func<string, PResult> func)
+        public Parser(Func<string, PResult<TNode>> func)
         {
+            if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
+
             this.func = func;
         }
 
-        public Parser(string type, Func<string, PResult> func) : this(func)
+        public Parser(string type, Func<string, PResult<TNode>> func) : this(func)
         {
             Type = type;
         }
-        public Parser(string type, dynamic specificValue, Func<string, PResult> func) : this(type, func)
+        public Parser(string type, dynamic specificValue, Func<string, PResult<TNode>> func) : this(type, func)
         {
             SpecificValue = specificValue.ToString();
         }
@@ -30,83 +32,10 @@ namespace APCSharp.Parser
             else return null;
         }
 
-        #region Preset Parsers
-        /// <summary>
-        /// Accepts character if in range of n and m.
-        /// </summary>
-        /// <param name="n">Lower character bound</param>
-        /// <param name="m">Upper character bound></param>
-        /// <returns>Parser for any character between n and m</returns>
-        public static ParserBuilder InRange(char n, char m) => InRange(n, m, NodeType.Char);
-        /// <summary>
-        /// Accepts character if in range of n and m and set a custom named NodeType.
-        /// </summary>
-        /// <param name="n">Lower character bound</param>
-        /// <param name="m">Upper character bound></param>
-        /// <param name="charType">Named type of matched character</param>
-        /// <returns>Parser for any character between n and m</returns>
-        public static ParserBuilder InRange(char n, char m, NodeType charType)
-        {
-            ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m, null);
-            parser.func = (string s) =>
-            {
-                if (!string.IsNullOrEmpty(s))
-                {
-                    ProcessChar(s[0]);
-                    if (s[0] >= n && s[0] <= m) return PResult.Succeeded(new Node(charType, s[0]), s.Remove(0, 1));
-                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
-                }
-                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
-            };
-            return parser;
-        }
-        public static ParserBuilder Char(char c)
-        {
-            ParserBuilder parser = new ParserBuilder("character", c, null);
-            parser.func = (string s) =>
-            {
-                if (!string.IsNullOrEmpty(s))
-                {
-                    ProcessChar(s[0]);
-                    if (s[0] == c) return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
-                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
-                }
-                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
-            };
-            return parser;
-        }
-
-        public static ParserBuilder String(string s)
-        {
-            ParserBuilder[] parsers = new ParserBuilder[s.Length];
-            for (int i = 0; i < s.Length; i++) parsers[i] = Char(s[i]);
-            ParserBuilder parser = SequenceOf(parsers);
-            parser.Type = "string";
-            parser.SpecificValue = s;
-            return parser;
-        }
-
-        public static ParserBuilder Letter = InRange('A', 'z').InfoBinder("letter");
-        public static ParserBuilder Digit = InRange('0', '9', NodeType.Digit).InfoBinder("digit");
-
-        public static ParserBuilder Letters = Letter.Many().InfoBinder("letters");
-        public static ParserBuilder Word = Letters.Map(NodeType.Word).InfoBinder("word");
-        public static ParserBuilder Integer = Digit.Many().Map(NodeType.Integer).InfoBinder("integer");
-        public static ParserBuilder Number = Integer.FollowedBy(Char('.')).FollowedBy(Integer).InfoBinder("number");
-
-        public static ParserBuilder WhiteSpace = AnyOf(
-                                                    Char(' '),
-                                                    Char('\t'),
-                                                    Char('\n'),
-                                                    Char('\r')
-                                                ).InfoBinder("whitespace");
-        public static ParserBuilder WhiteSpaces = WhiteSpace.Many().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
-
-        #endregion
 
         #region Meta Parsers
-        public static ParserBuilder InfoBinder(string type, ParserBuilder parser) => InfoBinder(type, null, parser);
-        public static ParserBuilder InfoBinder(string type, string spesificValue, ParserBuilder parser)
+        public static ParserBuilder<TNode> InfoBinder(string type, ParserBuilder<TNode> parser) => InfoBinder(type, null, parser);
+        public static ParserBuilder<TNode> InfoBinder(string type, string spesificValue, ParserBuilder<TNode> parser)
         {
             parser.Type = type;
             parser.SpecificValue = spesificValue;
@@ -136,18 +65,139 @@ namespace APCSharp.Parser
 
         #endregion
 
+        #region Preset Parsers
+        /// <summary>
+        /// Accepts character if in range of n and m and set a custom named NodeType.
+        /// </summary>
+        /// <param name="n">Lower character bound</param>
+        /// <param name="m">Upper character bound></param>
+        /// <param name="charType">Named type of matched character</param>
+        /// <returns>Parser for any character between n and m</returns>
+        public static ParserBuilder InRange(char n, char m, TNode charType)
+        {
+            ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m, null);
+            parser.func = (string s) =>
+            {
+                if (!string.IsNullOrEmpty(s))
+                {
+                    ProcessChar(s[0]);
+                    if (s[0] >= n && s[0] <= m) return PResult<TNode>.Succeeded(new Node<TNode>(charType, s[0]), s.Remove(0, 1));
+                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                }
+                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+            };
+            return parser;
+        }
+
+        #endregion
+
         #region Process Char
 
-        private static void ProcessChar(char c)
+        internal static void ProcessChar(char c)
         {
             Data.SharedData.LineColumn.NextColumn();
-            switch(c)
+            switch (c)
             {
                 case '\n':
                     Data.SharedData.LineColumn.NextLine();
                     break;
             }
         }
+
+        #endregion
+
+    }
+
+    public class Parser : Parser<NodeType>
+    {
+        public Parser(Func<string, PResult<NodeType>> func) : base(func) { }
+
+        public Parser(string type, Func<string, PResult<NodeType>> func) : base(type, func) { }
+
+        public Parser(string type, dynamic specificValue, Func<string, PResult<NodeType>> func) : base(type, func) { SpecificValue = specificValue; }
+
+
+        #region Preset Parsers
+        /// <summary>
+        /// Accepts character if in range of n and m.
+        /// </summary>
+        /// <param name="n">Lower character bound</param>
+        /// <param name="m">Upper character bound></param>
+        /// <returns>Parser for any character between n and m</returns>
+        public static ParserBuilder InRange(char n, char m) => InRange(n, m, NodeType.Char);
+        public static ParserBuilder Char(char c)
+        {
+            ParserBuilder parser = new ParserBuilder("character", c, null);
+            parser.func = (string s) =>
+            {
+                if (!string.IsNullOrEmpty(s))
+                {
+                    ProcessChar(s[0]);
+                    if (s[0] == c) return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
+                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                }
+                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+            };
+            return parser;
+        }
+
+        public static ParserBuilder String(string s)
+        {
+            ParserBuilder[] parsers = new ParserBuilder[s.Length];
+            for (int i = 0; i < s.Length; i++) parsers[i] = Char(s[i]);
+            ParserBuilder parser = SequenceOf(parsers);
+            parser.Type = "string";
+            parser.SpecificValue = s;
+            return parser;
+        }
+
+        public static ParserBuilder CharsBut(params char[] c) => CharsBut(new char[] { }, c);
+        /// <summary>
+        /// Matching all characters but a number of given ones. Those can be accepted anyways if they are escaped using a prefix character.
+        /// </summary>
+        /// <param name="escapeing">Allowed prefix characters to escape.</param>
+        /// <param name="c">non-allowed characters</param>
+        /// <returns></returns>
+        public static ParserBuilder CharsBut(char[] escapeing, params char[] c)
+        {
+            ParserBuilder parser = new ParserBuilder("characters but", c, null);
+            parser.func = (string s) =>
+            {
+                if (!string.IsNullOrEmpty(s)) // Refactor this 'if' into ProcessChar
+                {
+                    ProcessChar(s[0]);
+                    int ci = 0;
+                    for (int j = 0; j < escapeing.Length; j++)
+                    {
+                        if (s[ci] == escapeing[j]) ci = 1;
+                    }
+                    for (int i = 0; i < c.Length; i++)
+                    {
+                        if (s[ci] == c[i]) return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                    }
+                    return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
+                }
+                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+            };
+            return parser;
+        }
+
+
+        public static ParserBuilder Letter = InRange('A', 'z').InfoBinder("letter");
+        public static ParserBuilder Digit = InRange('0', '9', NodeType.Digit).InfoBinder("digit");
+
+        public static ParserBuilder Letters = Letter.Many().InfoBinder("letters");
+        public static ParserBuilder Word = Letters.Map(NodeType.Word).InfoBinder("word");
+        public static ParserBuilder Integer = Digit.Many().Map(NodeType.Integer).InfoBinder("integer");
+        public static ParserBuilder Number = Integer.FollowedBy(Char('.')).FollowedBy(Integer).InfoBinder("number");
+
+        public static ParserBuilder WhiteSpace = AnyOf(
+                                                    Char(' '),
+                                                    Char('\t'),
+                                                    Char('\n'),
+                                                    Char('\r')
+                                                ).InfoBinder("whitespace");
+        public static ParserBuilder WhiteSpaces = WhiteSpace.Many().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
 
         #endregion
     }

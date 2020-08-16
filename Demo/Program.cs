@@ -7,7 +7,11 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            JSONDemo();
+        }
 
+        static void CodingDemo()
+        {
             Parser p =
                 Parser.AnyOf(
                     Parser.String("Programming"),
@@ -28,7 +32,7 @@ namespace Demo
 
             PResult r = p.Run(@"Coding
   is   cool!");
-            
+
             /*
             Parser p = Parser.Integer;
 
@@ -36,8 +40,28 @@ namespace Demo
 is cool!");
             */
 
-            if (r.Success) Console.WriteLine(r); 
+            if (r.Success) Console.WriteLine(r);
             else Console.WriteLine(r.ErrorMessage);
+        }
+
+        static void JSONDemo()
+        {
+            JSONObject data = JSONObject.Parse(@"{
+    ""Name"": ""Alex"",
+    ""Age"": 37,
+    ""Admin"": true,
+    ""Contact"": {
+        ""Site"": ""alexweb.com"",
+        ""Phone"": 123456789,
+        ""Address"": null
+    },
+    ""Tags"": [
+        ""php"",
+        ""web"",
+        ""dev""
+    ]
+}");
+            Console.WriteLine($"{data["Name"]} is {data["Age"]} years old and {(data["Admin"].AsBool().Value ? "is" : "is not")} admin.");
         }
     }
 }
