@@ -37,6 +37,12 @@
 .navbar-inverse .navbar-toggle:hover {
   background-color: #ffffff82;
 }
+
 .navbar-inverse .navbar-toggle .icon-bar {
   background-color: #ffffff;
+}
+
+/*  Links  */
+#_content p a {
+  border-bottom: solid 1px #6e7ba1;
 }

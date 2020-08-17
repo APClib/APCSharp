@@ -4,7 +4,7 @@ using System.Text;
 
 namespace APCSharp.TokenParser
 {
-    class TokenParser
+    public class TokenParser
     {
     }
 }
