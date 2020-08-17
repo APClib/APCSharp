@@ -47,7 +47,7 @@ is cool!");
         static void JSONDemo()
         {
             JSONObject data = JSONObject.Parse(@"{
-    ""Name"": ""Alex"",
+    ""Name"": ""Alex"", 
     ""Age"": 37,
     ""Admin"": true,
     ""Contact"": {

@@ -20,14 +20,8 @@ namespace APCSharp.Parser
         /// <summary>
         /// Node combiner function
         /// </summary>
-        internal readonly Func<Node<TNode>, Node<TNode>, Node<TNode>> func;
+        internal Func<Node<TNode>, Node<TNode>, Node<TNode>> func { get; set; }
 
-        /// <summary>
-        /// Preset combiner that concatinates the two Nodes values to a string with a custom NodeType typelabel.
-        /// </summary>
-        /// <param name="type">Result type</param>
-        /// <returns>A new string combiner with a custom result type</returns>
-        public static Combiner<TNode> TypedString(TNode type) => new Combiner<TNode>((Node<TNode> p1, Node<TNode> p2) => new Node<TNode>(type, p1.Value.ToString() + p2.Value.ToString()));
         /// <summary>
         /// Compatible Node types
         /// </summary>
@@ -57,18 +51,23 @@ namespace APCSharp.Parser
 
         public static implicit operator Combiner(Combiner<TNode> n)
         {
-            if (n.GetType().Equals(typeof(Combiner<NodeType>))) return n as Combiner;
+            if (typeof(TNode).Equals(typeof(NodeType))) return n as Combiner;
             throw new ArgumentException("Cannot cast Combiner<" + typeof(TNode).Name + "> to Combiner! Must be Combiner<NodeType>");
         }
     }
 
     public class Combiner : Combiner<NodeType>
     {
-        public Combiner(Func<Node, Node, Node> func) : base(func as Func<Node<NodeType>, Node<NodeType>, Node<NodeType>>) { }
         public Combiner(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) : base(func) { }
 
         public Combiner(CombinerType type, Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) : base(type, func) { }
 
+        /// <summary>
+        /// Preset combiner that concatinates the two Nodes values to a string with a custom NodeType typelabel.
+        /// </summary>
+        /// <param name="type">Result type</param>
+        /// <returns>A new string combiner with a custom result type</returns>
+        public static Combiner TypedString(NodeType type) => new Combiner((Node<NodeType> p1, Node<NodeType> p2) => new Node<NodeType>(type, p1.Value.ToString() + p2.Value.ToString()));
         /// <summary>
         /// Preset combiner that concatinates the two Nodes values to a string.
         /// </summary>

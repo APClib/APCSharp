@@ -2,6 +2,10 @@
 
 namespace APCSharp.Parser
 {
+    /// <summary>
+    /// Text parser.
+    /// </summary>
+    /// <typeparam name="TNode">Node Enum Types</typeparam>
     public class Parser<TNode> where TNode : struct, IConvertible
     {
         internal Func<string, PResult<TNode>> func;
@@ -108,6 +112,9 @@ namespace APCSharp.Parser
 
     }
 
+    /// <summary>
+    /// Default text parser enough for most parsers.
+    /// </summary>
     public class Parser : Parser<NodeType>
     {
         public Parser(Func<string, PResult<NodeType>> func) : base(func) { }
@@ -115,6 +122,12 @@ namespace APCSharp.Parser
         public Parser(string type, Func<string, PResult<NodeType>> func) : base(type, func) { }
 
         public Parser(string type, dynamic specificValue, Func<string, PResult<NodeType>> func) : base(type, func) { SpecificValue = specificValue; }
+
+        public static Parser From<TNode>(Parser<TNode> parser) where TNode : struct, IConvertible
+        {
+            if (parser.func.GetType().Equals(typeof(Func<string, PResult<NodeType>>))) return new Parser(parser.Type, parser.SpecificValue, parser.func as Func<string, PResult<NodeType>>);
+            throw new ArgumentException("Cannot cast Parser<" + typeof(TNode).Name + "> with " + parser.func.GetType() + " to Parser! Func must be of type Func<string, PResult>");
+        }
 
 
         #region Preset Parsers
@@ -132,8 +145,11 @@ namespace APCSharp.Parser
             {
                 if (!string.IsNullOrEmpty(s))
                 {
-                    ProcessChar(s[0]);
-                    if (s[0] == c) return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
+                    if (s[0] == c)
+                    {
+                        ProcessChar(s[0]);
+                        return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
+                    }
                     else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
                 }
                 return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);

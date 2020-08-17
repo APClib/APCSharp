@@ -36,13 +36,13 @@ namespace APCSharp.Parser
         #endregion
 
         #region Meta Parsers
-        public ParserBuilder<TNode> InfoBinder(string type) => Parser<TNode>.InfoBinder(type, null);
+        public ParserBuilder<TNode> InfoBinder(string type) => Parser<TNode>.InfoBinder(type, null, this);
         public ParserBuilder<TNode> InfoBinder(string type, string spesificValue) => InfoBinder(type, spesificValue, this);
         #endregion
 
         public static implicit operator ParserBuilder(ParserBuilder<TNode> n)
         {
-            if (n.GetType().Equals(typeof(ParserBuilder<NodeType>))) return n as ParserBuilder;
+            if (typeof(TNode).Equals(typeof(NodeType))) return n as ParserBuilder;
             throw new ArgumentException("Cannot cast Node<" + typeof(TNode).Name + "> to Node! Must be Node<NodeType>");
         }
         public Parser<TNode> ToParser() => this as Parser<TNode>;
@@ -54,11 +54,16 @@ namespace APCSharp.Parser
 
         public ParserBuilder(string type, Func<string, PResult<NodeType>> func) : base(type, func) { }
 
-        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult<NodeType>> func) : base(type, func) { SpecificValue = specificValue; }
+        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult<NodeType>> func) : this(type, func) { SpecificValue = specificValue.ToString(); }
 
 
 
         #region Dynamic Methods
+        /// <summary>
+        /// Requires a parser match to be followed by another parser match.
+        /// </summary>
+        /// <param name="parser">Next parser to use for matching remaning input</param>
+        /// <returns>A combined parser</returns>
         public ParserBuilder FollowedBy(ParserBuilder parser)
         {
             return new ParserBuilder((string s) => {
@@ -122,8 +127,8 @@ namespace APCSharp.Parser
             });
         }
 
-        public ParserBuilder Map(Func<Node, Node, Node> func) => Map(new Combiner(func), NodeType.String);
-        public ParserBuilder Map(Func<Node, Node, Node> func, NodeType namedType) => Map(new Combiner(func), namedType);
+        public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) => Map(new Combiner(func), NodeType.String);
+        public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func, NodeType namedType) => Map(new Combiner(func), namedType);
         public ParserBuilder Map() => Map(Combiner.String, NodeType.String);
         public ParserBuilder Map(NodeType namedType) => Map(Combiner.String, namedType);
         /// <summary>
@@ -135,6 +140,10 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
+                if (!p.Success)
+                {
+                    return p;
+                }
                 if (p.ResultNode.Children.Count < 2) return p;
                 Node n = p.ResultNode.Children[0];
                 for (int i = 1; i < p.ResultNode.Children.Count; i++)
@@ -170,6 +179,6 @@ namespace APCSharp.Parser
         #endregion
 
 
-        public static implicit operator Parser(ParserBuilder p) => p.ToParser() as Parser;
+        public static implicit operator Parser(ParserBuilder p) => Parser.From(p.ToParser());
     }
 }

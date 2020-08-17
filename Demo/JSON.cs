@@ -38,15 +38,7 @@ namespace Demo
         {
             get
             {
-                ParserBuilder parser;
-                parser = Parser.Char('[').FollowedBy(
-                        Parser.AnyOf(
-                            // ADD MORE
-                            JSONObject.objectParser
-                        )
-                    )
-                    .Maybe()
-                    .FollowedBy(Parser.Char(']'));
+                ParserBuilder parser = Parser.String("null").Or(Parser.String("undefined"));
                 return parser;
             }
         }
@@ -59,15 +51,18 @@ namespace Demo
         {
             get
             {
-                ParserBuilder parser;
-                parser = Parser.Char('[').FollowedBy(
-                        Parser.AnyOf(
-                            // ADD MORE
-                            JSONObject.objectParser
+                ParserBuilder parser =
+                    Parser.Char('"')
+                    .FollowedBy(
+                        Parser.CharsBut(new[] { '\\' },'"')
+                        .Many()
+                        .FollowedBy(
+                            Parser.Char('"')
                         )
                     )
-                    .Maybe()
-                    .FollowedBy(Parser.Char(']'));
+                    .Or(
+                        Parser.Char('"')
+                    );
                 return parser;
             }
         }
@@ -80,15 +75,7 @@ namespace Demo
         {
             get
             {
-                ParserBuilder parser;
-                parser = Parser.Char('[').FollowedBy(
-                        Parser.AnyOf(
-                            // ADD MORE
-                            JSONObject.objectParser
-                        )
-                    )
-                    .Maybe()
-                    .FollowedBy(Parser.Char(']'));
+                ParserBuilder parser = Parser.Number;
                 return parser;
             }
         }
@@ -101,15 +88,7 @@ namespace Demo
         {
             get
             {
-                ParserBuilder parser;
-                parser = Parser.Char('[').FollowedBy(
-                        Parser.AnyOf(
-                            // ADD MORE
-                            JSONObject.objectParser
-                        )
-                    )
-                    .Maybe()
-                    .FollowedBy(Parser.Char(']'));
+                ParserBuilder parser = Parser.String("true").Or(Parser.String("false"));
                 return parser;
             }
         }
@@ -123,14 +102,26 @@ namespace Demo
             get
             {
                 ParserBuilder parser;
-                parser = Parser.Char('[').FollowedBy(
-                        Parser.AnyOf(
-                            // ADD MORE
-                            JSONObject.objectParser
+                parser = Parser.Char('[')
+                    .FollowedBy(
+                        Parser.WhiteSpaces.Maybe()
+                        .FollowedBy(
+                            Parser.AnyOf(
+                                JSONNull.nullParser,
+                                JSONBool.boolParser,
+                                JSONNumber.numberParser,
+                                JSONString.stringParser
+                                // JSONObject.objectParser
+                                // JSONArray.arrayParser
+                            )
                         )
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        .FollowedBy(Parser.Char(','))
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        .Many()
+                    .FollowedBy(Parser.Char(']'))
                     )
-                    .Maybe()
-                    .FollowedBy(Parser.Char(']'));
+                    .Or(Parser.Char(']'));
                 return parser;
             }
         }
@@ -144,7 +135,6 @@ namespace Demo
         public JSONBase this[string key] {
             get
             {
-
                 return Value[key];
             }
             set
@@ -156,32 +146,33 @@ namespace Demo
         internal static ParserBuilder objectParser { get
             {
                 ParserBuilder parser;
-                parser = Parser.Char('{').FollowedBy(Parser.WhiteSpaces).Maybe().FollowedBy(
-
-                    // Key: Value, pairs
-                    Parser.AnyOf(
-                        Parser.Char('"').FollowedBy(Parser.CharsBut(new[] { '\\' }, '"').Maybe().Many().FollowedBy(Parser.Char('"'))),
-                        Parser.Word,
-                        Parser.Integer
-                    )
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .FollowedBy(Parser.Char(':'))
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
+                parser = Parser.Char('{').FollowedBy(
+                    Parser.WhiteSpaces).Maybe()
                     .FollowedBy(
+                        // Key: Value, pairs
                         Parser.AnyOf(
                             JSONString.stringParser,
-                            JSONNumber.numberParser,
-                            JSONBool.boolParser,
-                            JSONNull.nullParser,
-                            objectParser,
-                            JSONArray.arrayParser
+                            Parser.Word,
+                            Parser.Integer
                         )
-                    )
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        .FollowedBy(Parser.Char(':'))
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        .FollowedBy(
+                            Parser.AnyOf(
+                                JSONNull.nullParser,
+                                JSONBool.boolParser,
+                                JSONNumber.numberParser,
+                                JSONString.stringParser,
+                                // JSONObject.objectParser,
+                                JSONArray.arrayParser
+                            )
+                        )
 
-                    // Comma separation
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .FollowedBy(Parser.Char(','))
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        // Comma separation
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
+                        .FollowedBy(Parser.Char(','))
+                        .FollowedBy(Parser.WhiteSpaces).Maybe()
                     ).Maybe().FollowedBy(Parser.Char('}'));
                 return parser;
             } }
@@ -190,10 +181,11 @@ namespace Demo
             JSONObject result = new JSONObject();
 
             PResult pr = objectParser.Run(json);
+            if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + pr.Remaining);
             for (int i = 0; i < pr.ResultNode.Children.Count; i++)
             {
                 Node n = pr.ResultNode.Children[i];
-                
+                result[n.Value] = n.Children;
             }
 
             return result;

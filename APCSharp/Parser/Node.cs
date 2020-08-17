@@ -4,53 +4,6 @@ using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
-    /// <summary>
-    /// Default NodeType, should be sufficient for most parsers.
-    /// </summary>
-    public enum NodeType
-    {
-        /// <summary>
-        /// Value is damaged and invalid with no childnodes.
-        /// </summary>
-        Corrupted,
-        /// <summary>
-        /// Used by Maybe() method when generating non-matching result.
-        /// </summary>
-        Empty,
-
-        /// <summary>
-        /// Node Value is of type Char.
-        /// </summary>
-        Char,
-        /// <summary>
-        /// Node Value is null but have childnodes.
-        /// </summary>
-        List,
-        /// <summary>
-        /// Node Value is of type String or Char.
-        /// </summary>
-        String,
-        /// <summary>
-        /// Node Value is of type String or Char with label Word.
-        /// </summary>
-        Word,
-        /// <summary>
-        /// Node Value is of type String or Char with label WhiteSpace.
-        /// </summary>
-        WhiteSpace,
-        /// <summary>
-        /// Node Value is of type char with label Digit.
-        /// </summary>
-        Digit,
-        /// <summary>
-        /// Node Value is of type String or Char with label Integer.
-        /// </summary>
-        Integer,
-        /// <summary>
-        /// Node Value is of type String or Char with label Number.
-        /// </summary>
-        Number
-    }
     public class Node<TNode> where TNode : struct, IConvertible
     {
         /// <summary>
@@ -125,7 +78,7 @@ namespace APCSharp.Parser
         {
             string result = indent + $"Node {{ Type: {Type}";
 
-            if (Value != null) result += $", Value: \"{ValueToString()}\" ({Value.GetType().ToString()}) ";
+            if (Value != null) result += $", Value: \"{(Value.ToString() as string).ValueToHRT()}\" ({Value.GetType().ToString()}) ";
             if (Children.Count > 0)
             {
                 result += ", Children:\n";
@@ -140,20 +93,11 @@ namespace APCSharp.Parser
         /// </summary>
         /// <returns>String formatted root Node representation.</returns>
         public override string ToString() => ToString("");
-        /// <summary>
-        /// Readable representation of the node value.
-        /// </summary>
-        /// <returns></returns>
-        private string ValueToString()
-        {
-            string v = Value.ToString();
-            return v.ReplaceAll('\n', "\\n").ReplaceAll('\r', "\\r").ReplaceAll('\t', "\\t");
-        }
 
 
         public static implicit operator Node(Node<TNode> n)
         {
-            if (n.GetType().Equals(typeof(Node<NodeType>))) return n as Node;
+            if (typeof(TNode).Equals(typeof(NodeType))) return Node.From(n as Node<NodeType>);
             throw new ArgumentException("Cannot cast Node<" + typeof(TNode).Name + "> to Node! Must be Node<NodeType>");
         }
     }
@@ -184,12 +128,18 @@ namespace APCSharp.Parser
         /// <param name="value">Value to hold</param>
         /// <param name="children">Any childnodes</param>
         public Node(NodeType type, dynamic value, params Node[] children) : base(type, children) { Value = value; }
+        public Node(NodeType type, dynamic value, params Node<NodeType>[] children) : base(type, children) { Value = value; }
         /// <summary>
         /// Create a new Node without childnodes.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
         public Node(NodeType type, dynamic value) : base(type) { Value = value; }
+        internal static Node From(Node<NodeType> n)
+        {
+            return new Node(n.Type, n.Value, n.Children.ToArray());
+        }
+
         /// <summary>
         /// String formatted Node representation.
         /// </summary>
@@ -200,5 +150,6 @@ namespace APCSharp.Parser
             if (Type == NodeType.Corrupted) return indent + "Node { Type: Corrupted }";
             return base.ToString(indent);
         }
+
     }
 }
