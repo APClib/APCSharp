@@ -22,7 +22,7 @@ dotnet add package APCSharp
 View the project on [NuGet](https://www.nuget.org/packages/APCSharp/).
 
 ## Getting Started
-Welcome and thanks for being here, we're glad that you're interested in building your next parser with **APC#**! The first thing you should do is taking a look at the [Wiki](https://www.apc.wiki/).
+Welcome and thanks for being here, we're glad that you're interested in building your next parser with **APC#**! The first thing you should do is look at the [Wiki](https://www.apc.wiki/).
 
 
 ## Examples
