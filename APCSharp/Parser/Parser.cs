@@ -215,6 +215,8 @@ namespace APCSharp.Parser
                                                 ).InfoBinder("whitespace");
         public static ParserBuilder WhiteSpaces = WhiteSpace.Many().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
 
+        public static ParserBuilder Empty = new ParserBuilder((string s) => PResult.Unknown);
+
         #endregion
     }
 }

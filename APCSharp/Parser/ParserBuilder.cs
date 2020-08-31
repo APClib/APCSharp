@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace APCSharp.Parser
 {
@@ -12,6 +10,12 @@ namespace APCSharp.Parser
         {
             SpecificValue = specificValue.ToString();
         }
+
+        public static ParserBuilder<T> From<T>(Parser<T> parser) where T : struct, IConvertible
+        {
+            return new ParserBuilder<T>(parser.Type, parser.SpecificValue, parser.func);
+        }
+
         #region Dynamic Methods
 
         /// <summary>
@@ -31,6 +35,14 @@ namespace APCSharp.Parser
                 }
                 return p;
             });
+        }
+        /// <summary>
+        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
+        /// </summary>
+        /// <returns></returns>
+        public static ParserBuilder<TNode> Lazy(ParserBuilder<TNode> parser)
+        {
+            return new ParserBuilder<TNode>((string s) => parser.func(s));
         }
 
         #endregion
@@ -93,7 +105,7 @@ namespace APCSharp.Parser
                 {
                     return PResult.Succeeded(p1.ResultNode, p1.Remaining);
                 }
-                else
+                else if (parser != null)
                 {
                     PResult p2 = parser.func(s);
                     if (p2.Success)
@@ -120,6 +132,7 @@ namespace APCSharp.Parser
                 {
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
+                    if (remaining == string.Empty) break;
                     p = func(p.Remaining);
                 }
                 if (root.Children.Count == 1) return PResult.Succeeded(root.Children[0], remaining);

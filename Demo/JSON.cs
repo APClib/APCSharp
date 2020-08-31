@@ -142,49 +142,51 @@ namespace Demo
                 Value[key] = value;
             }
         }
+        internal static ParserBuilder objectParser(int depth = 0)
+        {
+            if (depth >= 10) return Parser.Empty;
 
-        internal static ParserBuilder objectParser { get
-            {
-                ParserBuilder parser;
-                parser = Parser.Char('{').FollowedBy(
-                    Parser.WhiteSpaces).Maybe()
+            ParserBuilder parser;
+            parser = Parser.Char('{').FollowedBy(
+                Parser.WhiteSpaces).Maybe()
+                .FollowedBy(
+                    // Key: Value, pairs
+                    Parser.AnyOf(
+                        JSONString.stringParser,
+                        Parser.Word,
+                        Parser.Integer
+                    )
+                    .FollowedBy(Parser.WhiteSpaces).Maybe()
+                    .FollowedBy(Parser.Char(':'))
+                    .FollowedBy(Parser.WhiteSpaces).Maybe()
                     .FollowedBy(
-                        // Key: Value, pairs
                         Parser.AnyOf(
+                            JSONNull.nullParser,
+                            JSONBool.boolParser,
+                            JSONNumber.numberParser,
                             JSONString.stringParser,
-                            Parser.Word,
-                            Parser.Integer
+                            JSONObject.objectParser(++depth),
+                            JSONArray.arrayParser
                         )
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                        .FollowedBy(Parser.Char(':'))
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                        .FollowedBy(
-                            Parser.AnyOf(
-                                JSONNull.nullParser,
-                                JSONBool.boolParser,
-                                JSONNumber.numberParser,
-                                JSONString.stringParser,
-                                // JSONObject.objectParser,
-                                JSONArray.arrayParser
-                            )
-                        )
+                    )
 
-                        // Comma separation
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                        .FollowedBy(Parser.Char(','))
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    ).Maybe().FollowedBy(Parser.Char('}'));
-                return parser;
-            } }
+                    // Comma separation
+                    .FollowedBy(Parser.WhiteSpaces).Maybe()
+                    .FollowedBy(Parser.Char(',')).Maybe()
+                    .FollowedBy(Parser.WhiteSpaces).Maybe()
+                    .Many()
+                ).Maybe().FollowedBy(Parser.Char('}'));
+            return parser;
+        }
         public static JSONObject Parse(string json)
         {
             JSONObject result = new JSONObject();
 
-            PResult pr = objectParser.Run(json);
+            PResult pr = objectParser().Run(json);
             if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + pr.Remaining);
             for (int i = 0; i < pr.ResultNode.Children.Count; i++)
             {
-                Node n = pr.ResultNode.Children[i];
+                Node n = (Node)pr.ResultNode.Children[i];
                 result[n.Value] = n.Children;
             }
 
