@@ -1,6 +1,6 @@
 ﻿using APCSharp.Util;
 
-namespace APCSharp.Error
+namespace APCSharp.Info
 {
     internal static class Error
     {

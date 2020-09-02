@@ -10,5 +10,9 @@ namespace APCSharp.Util
         /// Indentation prefix for node tree structure formatting.
         /// </summary>
         public static string Indentation = "    ";
+        /// <summary>
+        /// Print debug info from each parser function.
+        /// </summary>
+        public static bool DebugInfo = true;
     }
 }

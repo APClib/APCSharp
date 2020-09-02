@@ -1,4 +1,6 @@
 ﻿using System;
+using APCSharp.Info;
+using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
@@ -90,11 +92,12 @@ namespace APCSharp.Parser
             {
                 if (!string.IsNullOrEmpty(s))
                 {
+                    Debug.Print("Parsed char '" + s[0] + "'");
                     ProcessChar(s[0]);
                     if (s[0] >= n && s[0] <= m) return PResult<TNode>.Succeeded(new Node<TNode>(charType, s[0]), s.Remove(0, 1));
-                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                    else return PResult.Failed(Error.Unexpected(s[0], parser), s.Remove(0, 1));
                 }
-                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+                return PResult.Failed(Error.Unexpected("end of input", parser), null);
             };
             return parser;
         }
@@ -153,18 +156,20 @@ namespace APCSharp.Parser
                 {
                     if (s[0] == c)
                     {
+                        Debug.Print("Parsed char '" + c + "'");
                         ProcessChar(s[0]);
                         return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
                     }
-                    else return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                    else return PResult.Failed(Error.Unexpected(s[0], parser), s.Remove(0, 1));
                 }
-                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+                return PResult.Failed(Error.Unexpected("end of input", parser), null);
             };
             return parser;
         }
 
         public static ParserBuilder String(string s)
         {
+            Debug.Print("Looking for string '" + s + "'");
             ParserBuilder[] parsers = new ParserBuilder[s.Length];
             for (int i = 0; i < s.Length; i++) parsers[i] = Char(s[i]);
             ParserBuilder parser = SequenceOf(parsers);
@@ -177,29 +182,30 @@ namespace APCSharp.Parser
         /// <summary>
         /// Matching all characters but a number of given ones. Those can be accepted anyways if they are escaped using a prefix character.
         /// </summary>
-        /// <param name="escapeing">Allowed prefix characters to escape.</param>
+        /// <param name="escaping">Allowed prefix characters to escape.</param>
         /// <param name="c">non-allowed characters</param>
         /// <returns></returns>
-        public static ParserBuilder CharsBut(char[] escapeing, params char[] c)
+        public static ParserBuilder CharsBut(char[] escaping, params char[] c)
         {
-            ParserBuilder parser = new ParserBuilder("characters but", c, null);
+            ParserBuilder parser = new ParserBuilder("characters but", c.ArrayToString(), null);
             parser.func = (string s) =>
             {
                 if (!string.IsNullOrEmpty(s)) // Refactor this 'if' into ProcessChar
                 {
                     ProcessChar(s[0]);
                     int ci = 0;
-                    for (int j = 0; j < escapeing.Length; j++)
+                    for (int j = 0; j < escaping.Length; j++)
                     {
-                        if (s[ci] == escapeing[j]) ci = 1;
+                        if (s[ci] == escaping[j]) ci = 1;
                     }
                     for (int i = 0; i < c.Length; i++)
                     {
-                        if (s[ci] == c[i]) return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                        if (s[ci] == c[i]) return PResult.Failed(Error.Unexpected(s[0], parser), s.Remove(0, 1));
                     }
+                    Debug.Print("Parsed char '" + s[ci] + "'");
                     return PResult.Succeeded(new Node(NodeType.Char, s[ci]), s.Remove(0, 1));
                 }
-                return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
+                return PResult.Failed(Error.Unexpected("end of input", parser), null);
             };
             return parser;
         }
