@@ -46,6 +46,12 @@ namespace APCSharp.Parser
             return parser;
         }
 
+        /// <summary>
+        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
+        /// </summary>
+        /// <returns></returns>
+        public static ParserBuilder<TNode> Lazy(ParserBuilder<TNode> parser) => new ParserBuilder<TNode>((string s) => parser.Run(s));
+
         #endregion
 
         #region Static Methods
@@ -191,7 +197,7 @@ namespace APCSharp.Parser
                     {
                         if (s[ci] == c[i]) return PResult.Failed(Error.Error.Unexpected(s[0], parser), s.Remove(0, 1));
                     }
-                    return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
+                    return PResult.Succeeded(new Node(NodeType.Char, s[ci]), s.Remove(0, 1));
                 }
                 return PResult.Failed(Error.Error.Unexpected("end of input", parser), null);
             };
@@ -202,9 +208,9 @@ namespace APCSharp.Parser
         public static ParserBuilder Letter = InRange('A', 'z').InfoBinder("letter");
         public static ParserBuilder Digit = InRange('0', '9', NodeType.Digit).InfoBinder("digit");
 
-        public static ParserBuilder Letters = Letter.Many().InfoBinder("letters");
+        public static ParserBuilder Letters = Letter.OneOrMore().InfoBinder("letters");
         public static ParserBuilder Word = Letters.Map(NodeType.Word).InfoBinder("word");
-        public static ParserBuilder Integer = Digit.Many().Map(NodeType.Integer).InfoBinder("integer");
+        public static ParserBuilder Integer = Digit.OneOrMore().Map(NodeType.Integer).InfoBinder("integer");
         public static ParserBuilder Number = Integer.FollowedBy(Char('.')).FollowedBy(Integer).InfoBinder("number");
 
         public static ParserBuilder WhiteSpace = AnyOf(
@@ -213,7 +219,7 @@ namespace APCSharp.Parser
                                                     Char('\n'),
                                                     Char('\r')
                                                 ).InfoBinder("whitespace");
-        public static ParserBuilder WhiteSpaces = WhiteSpace.Many().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
+        public static ParserBuilder WhiteSpaces = WhiteSpace.ZeroOrMore().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
 
         public static ParserBuilder Empty = new ParserBuilder((string s) => PResult.Unknown);
 
