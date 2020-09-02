@@ -76,5 +76,13 @@ namespace APCSharp.Parser
         /// Preset combiner that creates a branch Node from two other Nodes.
         /// </summary>
         public static Combiner NodeList = new Combiner((Node<NodeType> p1, Node<NodeType> p2) => Node.List(p1, p2));
+        /// <summary>
+        /// Discard the second Node.
+        /// </summary>
+        public static Combiner First = new Combiner(CombinerType.Lists, (n1, n2) => n1);
+        /// <summary>
+        /// Discard the first Node.
+        /// </summary>
+        public static Combiner Second = new Combiner(CombinerType.Lists, (n1, n2) => n2);
     }
 }
