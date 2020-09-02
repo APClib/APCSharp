@@ -36,14 +36,6 @@ namespace APCSharp.Parser
                 return p;
             });
         }
-        /// <summary>
-        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
-        /// </summary>
-        /// <returns></returns>
-        public static ParserBuilder<TNode> Lazy(ParserBuilder<TNode> parser)
-        {
-            return new ParserBuilder<TNode>((string s) => parser.func(s));
-        }
 
         #endregion
 
@@ -112,15 +104,36 @@ namespace APCSharp.Parser
                     {
                         return PResult.Succeeded(p2.ResultNode, p2.Remaining);
                     }
+                    return PResult.Failed(Error.Error.Unexpected(s, this, parser), s);
                 }
-                return PResult.Failed(Error.Error.Unexpected(s, this, parser), s);
+                return PResult.Failed(Error.Error.Unexpected(s, this), s);
             });
         }
         /// <summary>
-        /// Generates a list of Nodes that match the parser
+        /// Generates a list of any Nodes that match the parser.
         /// </summary>
         /// <returns></returns>
-        public ParserBuilder Many()
+        public ParserBuilder ZeroOrMore()
+        {
+            return new ParserBuilder((string s) => {
+                PResult p = func(s);
+                Node root = Node.List();
+                string remaining = s;
+                while (p.Success)
+                {
+                    remaining = p.Remaining;
+                    root.Children.Add(p.ResultNode);
+                    if (remaining == null || remaining == string.Empty) break;
+                    p = func(p.Remaining);
+                }
+                return PResult.Succeeded(root, remaining);
+            });
+        }
+        /// <summary>
+        /// Generates a list of one or more Nodes that match the parser.
+        /// </summary>
+        /// <returns></returns>
+        public ParserBuilder OneOrMore()
         {
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
@@ -132,11 +145,10 @@ namespace APCSharp.Parser
                 {
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
-                    if (remaining == string.Empty) break;
+                    if (remaining == null || remaining == string.Empty) break;
                     p = func(p.Remaining);
                 }
-                if (root.Children.Count == 1) return PResult.Succeeded(root.Children[0], remaining);
-                else return PResult.Succeeded(root, remaining);
+                return PResult.Succeeded(root, remaining);
             });
         }
 
@@ -190,6 +202,8 @@ namespace APCSharp.Parser
             });
         }
         #endregion
+
+        public ParserBuilder ArbitraryWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe();
 
 
         public static implicit operator Parser(ParserBuilder p) => Parser.From(p.ToParser());
