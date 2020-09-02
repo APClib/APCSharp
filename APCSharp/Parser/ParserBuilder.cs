@@ -1,4 +1,5 @@
 ﻿using System;
+using APCSharp.Info;
 
 namespace APCSharp.Parser
 {
@@ -104,9 +105,9 @@ namespace APCSharp.Parser
                     {
                         return PResult.Succeeded(p2.ResultNode, p2.Remaining);
                     }
-                    return PResult.Failed(Error.Error.Unexpected(s, this, parser), s);
+                    return PResult.Failed(Error.Unexpected(s, this, parser), s);
                 }
-                return PResult.Failed(Error.Error.Unexpected(s, this), s);
+                return PResult.Failed(Error.Unexpected(s, this), s);
             });
         }
         /// <summary>
@@ -116,6 +117,7 @@ namespace APCSharp.Parser
         public ParserBuilder ZeroOrMore()
         {
             return new ParserBuilder((string s) => {
+                Debug.Print("Looking for zero or more " + GetMatchString());
                 PResult p = func(s);
                 Node root = Node.List();
                 string remaining = s;
@@ -136,6 +138,7 @@ namespace APCSharp.Parser
         public ParserBuilder OneOrMore()
         {
             return new ParserBuilder((string s) => {
+                Debug.Print("Looking for one or more " + GetMatchString());
                 PResult p = func(s);
                 Node root = Node.List();
                 if (!p.Success) return new PResult(false, root, s);
@@ -167,6 +170,7 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
+                Debug.Print("Mapping using " + (string.IsNullOrWhiteSpace(combiner.Name) ? "[Unnamed]" : combiner.Name) + " Combiner");
                 Node n;
                 if (!p.Success)
                 {
