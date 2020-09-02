@@ -60,7 +60,7 @@ namespace APCSharp.Parser
         /// <summary>
         /// Childnodes of current Node.
         /// </summary>
-        public List<Node<TNode>> Children { get; }
+        public List<Node<TNode>> Children { get; set; }
         /// <summary>
         /// Node type.
         /// </summary>
