@@ -23,7 +23,7 @@ namespace APCSharp.Parser
         /// </summary>
         Char,
         /// <summary>
-        /// Node Value is null but have childnodes.
+        /// Node Value is null but have child-nodes.
         /// </summary>
         List,
         /// <summary>
@@ -49,6 +49,14 @@ namespace APCSharp.Parser
         /// <summary>
         /// Node Value is of type String or Char with label Number.
         /// </summary>
-        Number
+        Number,
+        /// <summary>
+        /// Node Value is of type Object.
+        /// </summary>
+        Object,
+        /// <summary>
+        /// Node Value is a Pair of Nodes.
+        /// </summary>
+        Pair
     }
 }
