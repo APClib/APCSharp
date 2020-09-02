@@ -219,9 +219,8 @@ namespace APCSharp.Parser
                                                     Char('\n'),
                                                     Char('\r')
                                                 ).InfoBinder("whitespace");
-        public static ParserBuilder WhiteSpaces = WhiteSpace.ZeroOrMore().Map(Combiner.String, NodeType.WhiteSpace).InfoBinder("whitespaces");
 
-        public static ParserBuilder Empty = new ParserBuilder((string s) => PResult.Unknown);
+        public static ParserBuilder WhiteSpaces = WhiteSpace.ZeroOrMore().Map(Combiner.String, NodeType.WhiteSpace);
 
         #endregion
     }

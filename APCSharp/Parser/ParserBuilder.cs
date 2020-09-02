@@ -123,7 +123,7 @@ namespace APCSharp.Parser
                 {
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
-                    if (remaining == null || remaining == string.Empty) break;
+                    if (string.IsNullOrEmpty(remaining)) break;
                     p = func(p.Remaining);
                 }
                 return PResult.Succeeded(root, remaining);
@@ -137,21 +137,23 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
-                if (!p.Success) return p;
-
                 Node root = Node.List();
+                if (!p.Success) return new PResult(false, root, s);
+
                 string remaining = string.Empty;
                 while (p.Success)
                 {
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
-                    if (remaining == null || remaining == string.Empty) break;
+                    if (string.IsNullOrEmpty(remaining)) break;
                     p = func(p.Remaining);
                 }
                 return PResult.Succeeded(root, remaining);
             });
         }
-
+        
+        public ParserBuilder ListMap(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) => Map(new Combiner(CombinerType.Lists, func), NodeType.String);
+        public ParserBuilder ListMap(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func, NodeType namedType) => Map(new Combiner(CombinerType.Lists, func), namedType);
         public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) => Map(new Combiner(func), NodeType.String);
         public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func, NodeType namedType) => Map(new Combiner(func), namedType);
         public ParserBuilder Map() => Map(Combiner.String, NodeType.String);
@@ -165,12 +167,16 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 PResult p = func(s);
+                Node n;
                 if (!p.Success)
                 {
-                    return p;
+                    if (p.ResultNode == null) return p;
+                    n = p.ResultNode;
+                    n.Type = namedType;
+                    return new PResult(false, n, p.Remaining);
                 }
                 if (p.ResultNode.Children.Count < 2) return p;
-                Node n = p.ResultNode.Children[0];
+                n = p.ResultNode.Children[0];
                 for (int i = 1; i < p.ResultNode.Children.Count; i++)
                 {
                     if (combiner.Type != CombinerType.Lists && (n.Type == NodeType.List || p.ResultNode.Children[i].Type == NodeType.List)) throw new ArgumentException($"Cannot perform mapping of lists with the given combiner '{combiner.func.Method.Name}'. Please use a combiner that works over elements.");
@@ -203,8 +209,8 @@ namespace APCSharp.Parser
         }
         #endregion
 
-        public ParserBuilder ArbitraryWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe();
-
+        public ParserBuilder ArbitraryWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe().InfoBinder("whitespaces");
+        public ParserBuilder IgnoredArbitraryWhitespaces() => ArbitraryWhitespaces().Map(Combiner.First, NodeType.List);
 
         public static implicit operator Parser(ParserBuilder p) => Parser.From(p.ToParser());
     }
