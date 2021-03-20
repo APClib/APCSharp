@@ -11,8 +11,8 @@ namespace APCSharp.Util
         /// </summary>
         public static string Indentation = "    ";
         /// <summary>
-        /// Print debug info from each parser function.
+        /// Print debug info from each parser Function.
         /// </summary>
-        public static bool DebugInfo = true;
+        public static bool DebugInfo = false;
     }
 }

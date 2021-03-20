@@ -1,5 +1,6 @@
 ﻿using System;
 using APCSharp.Parser;
+using APCSharp.Util;
 
 namespace Demo
 {
@@ -7,7 +8,34 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            JSONDemo();
+            MatchDemo();
+        }
+
+        static void MatchDemo()
+        {
+            Parser equalSignParser = Parser.Char('=').InfoBinder("equal sign '='");
+            Parser identifierParser =  Parser.AnyOf(Parser.Word, Parser.Char('_')).FollowedBy(Parser.AnyOf(Parser.Word, Parser.Char('_'), Parser.Integer).ZeroOrMore().ListToString()).ListToString().InfoBinder("variable identifier");
+
+            while (true)
+            {
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.Write("LI> "); 
+                var expr = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(expr)) continue;
+                PResult result = identifierParser.Run(expr);
+                if (result.Success)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine(result.ResultNode.ToString());
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"Remaining ({result.Remaining.Length}): '{result.Remaining}'");
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(result.ErrorMessage);
+                }
+            }
         }
 
         static void CodingDemo()
@@ -23,7 +51,7 @@ namespace Demo
                         Parser.Char('.')
                     )
                  )
-                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().Many()
+                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().OneOrMore()
                 .FollowedBy(Parser.AnyOf(
                     Parser.Char('!'),
                     Parser.Char('?'),
@@ -46,6 +74,7 @@ is cool!");
 
         static void JSONDemo()
         {
+            /*
             JSONObject data = JSONObject.Parse(@"{
     ""Name"": ""Alex"", 
     ""Age"": 37,
@@ -60,6 +89,12 @@ is cool!");
         ""web"",
         ""dev""
     ]
+}");
+*/
+            JSONObject data = JSONObject.Parse(
+@"{
+    ""Name"" :  ""Alex"",
+    ""Age"" :  ""20""
 }");
             Console.WriteLine($"{data["Name"]} is {data["Age"]} years old and {(data["Admin"].AsBool().Value ? "is" : "is not")} admin.");
         }

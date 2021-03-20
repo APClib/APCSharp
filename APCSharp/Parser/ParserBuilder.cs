@@ -1,67 +1,23 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using APCSharp.Info;
 
 namespace APCSharp.Parser
 {
-    public class ParserBuilder<TNode> : Parser<TNode> where TNode : struct, IConvertible
+    public class ParserBuilder : Parser
     {
-        public ParserBuilder(Func<string, PResult<TNode>> func) : base(func) { }
-        public ParserBuilder(string type, Func<string, PResult<TNode>> func) : base(type, func) { }
-        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult<TNode>> func) : this(type, func)
-        {
-            SpecificValue = specificValue.ToString();
-        }
+        public ParserBuilder(Func<string, PResult> Func) : base(Func) { }
 
-        public static ParserBuilder<T> From<T>(Parser<T> parser) where T : struct, IConvertible
-        {
-            return new ParserBuilder<T>(parser.Type, parser.SpecificValue, parser.func);
-        }
+        public ParserBuilder(string type, Func<string, PResult> Func) : base(type, Func) { }
 
-        #region Dynamic Methods
+        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult> Func) : this(type, Func) { SpecificValue = specificValue.ToString(); }
 
-        /// <summary>
-        /// Expects the parser to be repeated n, number of times.
-        /// </summary>
-        /// <param name="n">Number of times</param>
-        /// <returns>parser</returns>
-        public ParserBuilder<TNode> Times(int n)
-        {
-            return new ParserBuilder<TNode>((string s) => {
-                PResult<TNode> p = func(s);
-                for (int i = 1; i < n; i++)
-                {
-                    p = func(s);
-                    if (!p.Success) break;
-                    s = p.Remaining;
-                }
-                return p;
-            });
-        }
-
-        #endregion
+        public new PResult Run(string s) => base.Run(s);
 
         #region Meta Parsers
-        public ParserBuilder<TNode> InfoBinder(string type) => Parser<TNode>.InfoBinder(type, null, this);
-        public ParserBuilder<TNode> InfoBinder(string type, string spesificValue) => InfoBinder(type, spesificValue, this);
+        public ParserBuilder InfoBinder(string type) => InfoBinder(type, null, this);
+        public ParserBuilder InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
         #endregion
-
-        public static implicit operator ParserBuilder(ParserBuilder<TNode> n)
-        {
-            if (typeof(TNode).Equals(typeof(NodeType))) return n as ParserBuilder;
-            throw new ArgumentException("Cannot cast Node<" + typeof(TNode).Name + "> to Node! Must be Node<NodeType>");
-        }
-        public Parser<TNode> ToParser() => this as Parser<TNode>;
-    }
-
-    public class ParserBuilder : ParserBuilder<NodeType>
-    {
-        public ParserBuilder(Func<string, PResult<NodeType>> func) : base(func) { }
-
-        public ParserBuilder(string type, Func<string, PResult<NodeType>> func) : base(type, func) { }
-
-        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult<NodeType>> func) : this(type, func) { SpecificValue = specificValue.ToString(); }
-
-
 
         #region Dynamic Methods
         /// <summary>
@@ -72,10 +28,10 @@ namespace APCSharp.Parser
         public ParserBuilder FollowedBy(ParserBuilder parser)
         {
             return new ParserBuilder((string s) => {
-                PResult p1 = func(s);
+                PResult p1 = Func(s);
                 if (p1.Success)
                 {
-                    PResult p2 = parser.func(p1.Remaining);
+                    PResult p2 = parser.Func(p1.Remaining);
                     if (p2.Success)
                     {
                         return PResult.Succeeded(Node.List(p1.ResultNode, p2.ResultNode), p2.Remaining);
@@ -93,21 +49,21 @@ namespace APCSharp.Parser
         public ParserBuilder Or(ParserBuilder parser)
         {
             return new ParserBuilder((string s) => {
-                PResult p1 = func(s); // Run this
+                PResult p1 = Func(s); // Run this
                 if (p1.Success)
                 {
                     return PResult.Succeeded(p1.ResultNode, p1.Remaining);
                 }
                 else if (parser != null)
                 {
-                    PResult p2 = parser.func(s);
+                    PResult p2 = parser.Func(s);
                     if (p2.Success)
                     {
                         return PResult.Succeeded(p2.ResultNode, p2.Remaining);
                     }
-                    return PResult.Failed(Error.Unexpected(s, this, parser), s);
+                    return PResult.Failed(Error.Unexpected(p2.ErrorSequence, this, parser), p2.ErrorSequence, s);
                 }
-                return PResult.Failed(Error.Unexpected(s, this), s);
+                return PResult.Failed(Error.Unexpected(s, this), p1.ErrorSequence, s);
             });
         }
         /// <summary>
@@ -118,7 +74,7 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 Debug.Print("Looking for zero or more " + GetMatchString());
-                PResult p = func(s);
+                PResult p = Func(s);
                 Node root = Node.List();
                 string remaining = s;
                 while (p.Success)
@@ -126,7 +82,7 @@ namespace APCSharp.Parser
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
                     if (string.IsNullOrEmpty(remaining)) break;
-                    p = func(p.Remaining);
+                    p = Func(p.Remaining);
                 }
                 return PResult.Succeeded(root, remaining);
             });
@@ -139,9 +95,9 @@ namespace APCSharp.Parser
         {
             return new ParserBuilder((string s) => {
                 Debug.Print("Looking for one or more " + GetMatchString());
-                PResult p = func(s);
+                PResult p = Func(s);
                 Node root = Node.List();
-                if (!p.Success) return new PResult(false, root, s);
+                if (!p.Success) return p; // PResult.Failed($"Expected at least one {GetMatchString()} but found '{(s.Length > 5 ? s.Substring(0, 5) + "..." : s)}'.", s);
 
                 string remaining = string.Empty;
                 while (p.Success)
@@ -149,52 +105,48 @@ namespace APCSharp.Parser
                     remaining = p.Remaining;
                     root.Children.Add(p.ResultNode);
                     if (string.IsNullOrEmpty(remaining)) break;
-                    p = func(p.Remaining);
+                    p = Func(p.Remaining);
                 }
                 return PResult.Succeeded(root, remaining);
             });
         }
         
-        public ParserBuilder ListMap(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) => Map(new Combiner(CombinerType.Lists, func), NodeType.String);
-        public ParserBuilder ListMap(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func, NodeType namedType) => Map(new Combiner(CombinerType.Lists, func), namedType);
-        public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func) => Map(new Combiner(func), NodeType.String);
-        public ParserBuilder Map(Func<Node<NodeType>, Node<NodeType>, Node<NodeType>> func, NodeType namedType) => Map(new Combiner(func), namedType);
-        public ParserBuilder Map() => Map(Combiner.String, NodeType.String);
+        public ParserBuilder ListMap(Func<Node, Node?, Node> func) => Map(new Combiner(CombinerType.Lists, func), NodeType.String);
+        public ParserBuilder ListMap(Func<Node, Node?, Node> func, NodeType namedType) => Map(new Combiner(CombinerType.Lists, func), namedType);
+        public ParserBuilder Map(Func<Node, Node?, Node> func) => Map(new Combiner(func), NodeType.String);
+        public ParserBuilder Map(Func<Node, Node?, Node> func, NodeType namedType) => Map(new Combiner(func), namedType);
+        public ParserBuilder ListToString() => Map(Combiner.String, NodeType.String);
         public ParserBuilder Map(NodeType namedType) => Map(Combiner.String, namedType);
+
         /// <summary>
-        /// Preforms a function on every childnode of a parser result.
+        /// Preforms a Function on every childnode of a parser result.
         /// </summary>
-        /// <param name="combiner">The function to preform</param>
+        /// <param name="combiner">The Function to preform</param>
+        /// <param name="namedType"></param>
         /// <returns>A combined parser</returns>
         public ParserBuilder Map(Combiner combiner, NodeType namedType)
         {
             return new ParserBuilder((string s) => {
-                PResult p = func(s);
+                PResult p = Func(s);
                 Debug.Print("Mapping using " + (string.IsNullOrWhiteSpace(combiner.Name) ? "[Unnamed]" : combiner.Name) + " Combiner");
-                Node n;
-                if (!p.Success)
+                if (!p.Success) return p;
+                if (p.ResultNode.Children.Count == 0) return PResult.Succeeded(Node.Empty, p.Remaining);
+                Node n = p.ResultNode.Children[0];
+                if (p.ResultNode.Children.Count == 1) n = combiner.Combine(n, null); // Use single value
+                else for (int i = 1; i < p.ResultNode.Children.Count; i++)
                 {
-                    if (p.ResultNode == null) return p;
-                    n = p.ResultNode;
-                    n.Type = namedType;
-                    return new PResult(false, n, p.Remaining);
-                }
-                if (p.ResultNode.Children.Count < 2) return p;
-                n = p.ResultNode.Children[0];
-                for (int i = 1; i < p.ResultNode.Children.Count; i++)
-                {
-                    if (combiner.Type != CombinerType.Lists && (n.Type == NodeType.List || p.ResultNode.Children[i].Type == NodeType.List)) throw new ArgumentException($"Cannot perform mapping of lists with the given combiner '{combiner.func.Method.Name}'. Please use a combiner that works over elements.");
+                    if (combiner.Type != CombinerType.Lists && (n.Type == NodeType.List || p.ResultNode.Children[i].Type == NodeType.List)) throw new ArgumentException($"Cannot perform mapping of lists with the given combiner '{combiner.Func.Method.Name}'. Please use a combiner that works over elements.");
                     n = combiner.Combine(n, p.ResultNode.Children[i]);
                 }
                 n.Type = namedType;
-                return new PResult(p.Success, n, p.Remaining);
+                return PResult.Succeeded(n, p.Remaining);
             });
         }
 
-        public ParserBuilder Maybe()
+        private ParserBuilder MaybeMatch()
         {
             return new ParserBuilder((string s) => {
-                PResult p = func(s);
+                PResult p = Func(s);
                 if (p.Success) return p;
                 else return PResult.Empty(p.Remaining);
             });
@@ -203,7 +155,7 @@ namespace APCSharp.Parser
         public ParserBuilder RemoveEmptyMaybeMatches()
         {
             return new ParserBuilder((string s) => {
-                PResult p = func(s);
+                PResult p = Func(s);
                 for (int i = 0; i < p.ResultNode.Children.Count; i++)
                 {
                     if (p.ResultNode.Children[i].Type == NodeType.Empty) p.ResultNode.Children.RemoveAt(i);
@@ -211,11 +163,67 @@ namespace APCSharp.Parser
                 return p;
             });
         }
+        /// <summary>
+        /// Adds a parsers match if any. Use for optional matches.
+        /// Automatically removes empty maybe matches.
+        /// </summary>
+        /// <returns></returns>
+        public ParserBuilder Maybe() => MaybeMatch().RemoveEmptyMaybeMatches();
         #endregion
 
         public ParserBuilder ArbitraryWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe().InfoBinder("whitespaces");
         public ParserBuilder IgnoredArbitraryWhitespaces() => ArbitraryWhitespaces().Map(Combiner.First, NodeType.List);
+    }
 
-        public static implicit operator Parser(ParserBuilder p) => Parser.From(p.ToParser());
+
+
+
+
+
+
+
+
+
+    public class ParserBuilder<TNode> : Parser<TNode> where TNode : struct, IConvertible
+    {
+        public ParserBuilder(Func<string, PResult<TNode>> Func) : base(Func) { }
+        public ParserBuilder(string type, Func<string, PResult<TNode>> Func) : base(type, Func) { }
+        public ParserBuilder(string type, dynamic specificValue, Func<string, PResult<TNode>> Func) : this(type, Func)
+        {
+            SpecificValue = specificValue.ToString();
+        }
+
+        public static ParserBuilder<T> From<T>(Parser<T> parser) where T : struct, IConvertible
+        {
+            return new ParserBuilder<T>(parser.Type, parser.SpecificValue, parser.Func);
+        }
+
+        #region Dynamic Methods
+
+        /// <summary>
+        /// Expects the parser to be repeated n, number of times.
+        /// </summary>
+        /// <param name="n">Number of times</param>
+        /// <returns>parser</returns>
+        public ParserBuilder<TNode> Times(int n)
+        {
+            return new ParserBuilder<TNode>((string s) => {
+                PResult<TNode> p = Func(s);
+                for (int i = 1; i < n; i++)
+                {
+                    p = Func(s);
+                    if (!p.Success) break;
+                    s = p.Remaining;
+                }
+                return p;
+            });
+        }
+
+        #endregion
+
+        #region Meta Parsers
+        public ParserBuilder<TNode> InfoBinder(string type) => InfoBinder(type, null, this);
+        public ParserBuilder<TNode> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
+        #endregion
     }
 }

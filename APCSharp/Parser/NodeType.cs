@@ -35,9 +35,17 @@ namespace APCSharp.Parser
         /// </summary>
         Word,
         /// <summary>
+        /// Node Value is of type String or Char with label Identifier.
+        /// </summary>
+        Identifier,
+        /// <summary>
         /// Node Value is of type String or Char with label WhiteSpace.
         /// </summary>
         WhiteSpace,
+        /// <summary>
+        /// Node Value is of type String or Char with label Newline.
+        /// </summary>
+        Newline,
         /// <summary>
         /// Node Value is of type char with label Digit.
         /// </summary>
@@ -57,6 +65,6 @@ namespace APCSharp.Parser
         /// <summary>
         /// Node Value is a Pair of Nodes.
         /// </summary>
-        Pair
+        Pair,
     }
 }

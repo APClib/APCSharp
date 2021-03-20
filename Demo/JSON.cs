@@ -5,184 +5,144 @@ using System.Text;
 
 namespace Demo
 {
-    public abstract class JSONBase<T>
+    public abstract class JsonBase<T>
     {
-        public JSONBase(T value)
+        protected JsonBase(T value)
         {
             Value = value;
         }
-        internal JSONBase() : this(default) { }
+        internal JsonBase() : this(default) { }
 
         public T Value { get; }
 
-        public JSONString AsString() => new JSONString(Value.ToString());
-        public JSONNumber AsNumber() => (JSONNumber)Convert.ChangeType(Value, typeof(JSONNumber));
-        public JSONBool AsBool() => (JSONBool)Convert.ChangeType(Value, typeof(JSONBool));
-        public JSONArray AsArray() => (JSONArray)Convert.ChangeType(Value, typeof(JSONArray));
+        public JsonString AsString() => new JsonString(Value.ToString());
+        public JsonNumber AsNumber() => (JsonNumber)Convert.ChangeType(Value, typeof(JsonNumber));
+        public JsonBool AsBool() => (JsonBool)Convert.ChangeType(Value, typeof(JsonBool));
+        public JsonArray AsArray() => (JsonArray)Convert.ChangeType(Value, typeof(JsonArray));
         public JSONObject AsObject() => (JSONObject)Convert.ChangeType(Value, typeof(JSONObject));
 
     }
-    public class JSONBase : JSONBase<dynamic>
+    public class JsonBase : JsonBase<dynamic>
     {
-        public JSONBase(dynamic value) {
+        public JsonBase(dynamic value) {
             Value = value;
         }
 
         public new dynamic Value { get; }
     }
-    public class JSONNull : JSONBase<string>
+    public class JsonNull : JsonBase<string>
     {
-        public JSONNull(string value) : base(value) { }
+        public JsonNull(string value) : base(value) { }
 
-        internal static ParserBuilder nullParser
-        {
-            get
-            {
-                ParserBuilder parser = Parser.String("null").Or(Parser.String("undefined"));
-                return parser;
-            }
-        }
+        internal static ParserBuilder NullParser = Parser.String("null").Or(Parser.String("undefined"));
     }
-    public class JSONString : JSONBase<string>
+    public class JsonString : JsonBase<string>
     {
-        public JSONString(string value) : base(value) { }
+        public JsonString(string value) : base(value) { }
 
-        internal static ParserBuilder stringParser
-        {
-            get
-            {
-                ParserBuilder parser =
-                    Parser.Char('"')
-                    .FollowedBy(
-                        Parser.CharsBut(new[] { '\\' },'"')
-                        .Many()
-                        .FollowedBy(
-                            Parser.Char('"')
-                        )
-                    )
-                    .Or(
-                        Parser.Char('"')
-                    );
-                return parser;
-            }
-        }
-    }
-    public class JSONNumber : JSONBase<decimal>
-    {
-        public JSONNumber(decimal value) : base(value) { }
-
-        internal static ParserBuilder numberParser
-        {
-            get
-            {
-                ParserBuilder parser = Parser.Number;
-                return parser;
-            }
-        }
-    }
-    public class JSONBool : JSONBase<bool>
-    {
-        public JSONBool(bool value) : base(value) { }
-
-        internal static ParserBuilder boolParser
-        {
-            get
-            {
-                ParserBuilder parser = Parser.String("true").Or(Parser.String("false"));
-                return parser;
-            }
-        }
-    }
-    public class JSONArray : JSONBase<JSONBase[]>
-    {
-        public JSONArray(JSONBase[] elements) : base(elements) { }
-
-        internal static ParserBuilder arrayParser
-        {
-            get
-            {
-                ParserBuilder parser;
-                parser = Parser.Char('[')
-                    .FollowedBy(
-                        Parser.WhiteSpaces.Maybe()
-                        .FollowedBy(
-                            Parser.AnyOf(
-                                JSONNull.nullParser,
-                                JSONBool.boolParser,
-                                JSONNumber.numberParser,
-                                JSONString.stringParser
-                                // JSONObject.objectParser
-                                // JSONArray.arrayParser
-                            )
-                        )
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                        .FollowedBy(Parser.Char(','))
-                        .FollowedBy(Parser.WhiteSpaces).Maybe()
-                        .Many()
-                    .FollowedBy(Parser.Char(']'))
-                    )
-                    .Or(Parser.Char(']'));
-                return parser;
-            }
-        }
-    }
-    public class JSONObject : JSONBase<Dictionary<string, JSONBase>>
-    {
-        public JSONObject(Dictionary<string, JSONBase> keyValuePairs) : base(keyValuePairs) { }
-
-        public JSONObject() : this(new Dictionary<string, JSONBase>()) { }
-
-        public JSONBase this[string key] {
-            get
-            {
-                return Value[key];
-            }
-            set
-            {
-                Value[key] = value;
-            }
-        }
-        internal static ParserBuilder objectParser(int depth = 0)
-        {
-            if (depth >= 10) return Parser.Empty;
-
-            ParserBuilder parser;
-            parser = Parser.Char('{').FollowedBy(
-                Parser.WhiteSpaces).Maybe()
+        internal static ParserBuilder StringParser =
+            Parser.Char('"')
                 .FollowedBy(
-                    // Key: Value, pairs
-                    Parser.AnyOf(
-                        JSONString.stringParser,
-                        Parser.Word,
-                        Parser.Integer
-                    )
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .FollowedBy(Parser.Char(':'))
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .FollowedBy(
+                    Parser.CharsBut(new[] {'\\'}, '"')
+                        .OneOrMore()
+                        .Map(Combiner.String, NodeType.String)
+                )
+                .FollowedBy(
+                    Parser.Char('"')
+                )
+                .ListMap((n1, n2) => n1.Children[1], NodeType.String); // Extract string value
+    }
+    public class JsonNumber : JsonBase<decimal>
+    {
+        public JsonNumber(decimal value) : base(value) { }
+
+        internal static ParserBuilder NumberParser = Parser.Number;
+    }
+    public class JsonBool : JsonBase<bool>
+    {
+        public JsonBool(bool value) : base(value) { }
+
+        internal static ParserBuilder BoolParser = Parser.String("true").Or(Parser.String("false"));
+    }
+    public class JsonArray : JsonBase<JsonBase[]>
+    {
+        public JsonArray(JsonBase[] elements) : base(elements) { }
+
+        internal static ParserBuilder ArrayParser =
+            Parser.Char('[')
+            .IgnoredArbitraryWhitespaces()
+            .FollowedBy(
                         Parser.AnyOf(
-                            JSONNull.nullParser,
-                            JSONBool.boolParser,
-                            JSONNumber.numberParser,
-                            JSONString.stringParser,
-                            JSONObject.objectParser(++depth),
-                            JSONArray.arrayParser
+                            JsonNull.NullParser,
+                            JsonBool.BoolParser,
+                            JsonNumber.NumberParser,
+                            JsonString.StringParser
+                            // JSONObject.objectParser
+                            // JSONArray.arrayParser
                         )
                     )
+                    .IgnoredArbitraryWhitespaces()
+                    .FollowedBy(Parser.Char(','))
+                    .IgnoredArbitraryWhitespaces()
+                    .OneOrMore()
+                    .FollowedBy(Parser.Char(']'))
+            .Or(Parser.Char(']'));
+    }
+    public class JSONObject : JsonBase<Dictionary<string, JsonBase>>
+    {
+        public JSONObject(Dictionary<string, JsonBase> keyValuePairs) : base(keyValuePairs) { }
 
-                    // Comma separation
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .FollowedBy(Parser.Char(',')).Maybe()
-                    .FollowedBy(Parser.WhiteSpaces).Maybe()
-                    .Many()
-                ).Maybe().FollowedBy(Parser.Char('}'));
-            return parser;
+        public JSONObject() : this(new Dictionary<string, JsonBase>()) { }
+
+        public JsonBase this[string key] {
+            get => Value[key];
+            set => Value[key] = value;
         }
+
+        internal static ParserBuilder LazyObjectParser = Parser.Lazy(JSONObject.ObjectParser);
+        internal static ParserBuilder KeyValueParser =
+            Parser.AnyOf(
+                JsonString.StringParser,
+                Parser.Word,
+                Parser.Integer
+            )
+            .IgnoredArbitraryWhitespaces()
+            .FollowedBy(Parser.Char(':'))
+            .IgnoredArbitraryWhitespaces()
+            .Map(Combiner.First, NodeType.String)
+            .FollowedBy(
+                Parser.AnyOf(
+                    /*JSONNull.nullParser,
+                    JSONBool.boolParser,
+                    JSONNumber.numberParser,*/
+                    JsonString.StringParser /*,
+                    JSONObject.lazyObjectParser,
+                    JSONArray.arrayParser*/
+                )
+            ).ListMap((n1, n2) => Node.List(n1, n2), NodeType.Pair).InfoBinder("Key-Value", "Key value pair");
+
+        internal static ParserBuilder ObjectParser =
+            Parser.Char('{')
+                .ArbitraryWhitespaces()
+                // Key: Value, pairs
+                .FollowedBy(
+                    KeyValueParser
+                    .FollowedBy(Parser.Char(','))
+                    .IgnoredArbitraryWhitespaces()
+                )
+                .ZeroOrMore().Maybe()
+                .FollowedBy(KeyValueParser)
+                .FollowedBy(Parser.Char('}'))
+                .Map(Combiner.First, NodeType.Object);
+        
         public static JSONObject Parse(string json)
         {
             JSONObject result = new JSONObject();
 
-            PResult pr = objectParser().Run(json);
+            PResult pr = ObjectParser.Run(json);
+            if (pr.Success) Console.WriteLine(pr);
+            else Console.WriteLine(pr.ErrorMessage);
+
             if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + pr.Remaining);
             for (int i = 0; i < pr.ResultNode.Children.Count; i++)
             {

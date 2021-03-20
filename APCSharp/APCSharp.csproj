@@ -7,18 +7,20 @@
     <Authors>William Rågstad</Authors>
     <Product>APC#</Product>
     <Company />
-    <Description>Another Parser Combinator for C# is a library
-for building optimized and flexible parsers.</Description>
+    <Description>Another Parser Combinator for C#.
+A library for building optimized and flexible parsers.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/WilliamRagstad/APCSharp</PackageProjectUrl>
+    <PackageProjectUrl>https://www.apc.wiki/</PackageProjectUrl>
     <PackageIcon>logo.png</PackageIcon>
     <PackageIconUrl />
     <RepositoryUrl>https://github.com/WilliamRagstad/APCSharp</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
-    <PackageTags>parser, parsing, language, compiler, combinator, another, APC#</PackageTags>
+    <PackageTags>lexer, parser, parsing, language, tokenizer, lexical, semantic, analysis, compiler, combinator, another, APC#</PackageTags>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
     <None Include="..\assets\logo.png" Link="Package\logo_white_outline_transparent.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>

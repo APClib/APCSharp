@@ -1,10 +1,11 @@
 <div align="center">
  <img src="/assets/logo.png" width="33%"/>
-    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em> is a library <br>
-     for building optimized and flexible parsers.</p><br>
+    <p><b>Another Parser Combinator</b> <em>for <b>C#</b></em><br>
+     A library for building optimized and flexible parsers.</p><br>
  <img alt="Nuget" src="https://img.shields.io/nuget/v/APCSharp">
  <img alt="Nuget" src="https://img.shields.io/nuget/dt/APCSharp">
 </div>
+
 
 
 
@@ -75,12 +76,10 @@ PResult { Status: Succeeded, Remaining: "", AST:
 
 
 
-## Want to help?
+## 👩🏽‍🔬 Want to help?
 
-All help is verry much appreciated! You can fork the repo right now and start building your own version right away, and if you happen to create something interesting and useful, don't hesitate to file a pull request!
+All help is very much appreciated! You can fork the repo right now and start building your own version right away, and if you happen to create something interesting and useful, don't hesitate to file a pull request!
 
-### Sponsor this project
+## 🎈 Sponsor this project!
 
-You can also help by supporting the project financially, all gifts are appreciated with great reverence and gratitude.
-
-Developer: [paypal.me/williamragstad](http://paypal.me/williamragstad)
+Without all of you guys great support, I wouldn't be able to build projects like this! You can help by supporting the project financially or in code, all support is appreciated with great reverence and gratitude. [Become a sponsor today](https://github.com/sponsors/WilliamRagstad)! 🤩
