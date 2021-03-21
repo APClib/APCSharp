@@ -1,4 +1,6 @@
 ﻿using System;
+using APCSharp.Info;
+
 namespace APCSharp.Parser
 {
     /// <summary>
@@ -27,7 +29,6 @@ namespace APCSharp.Parser
         /// Constructor for a successful parse result
         /// </summary>
         /// <param name="node">Root AST</param>
-        /// <param name="rest">Remaining input characters</param>
         /// <returns>Successful parse result</returns>
         public static PResult Succeeded(Node node) => new PResult
         {
@@ -39,9 +40,8 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="errorMsg">A descriptive error message</param>
         /// <param name="errorSequence">The sequence that failed to be parsed</param>
-        /// <param name="rest">Remaining input characters</param>
         /// <returns>Failed parse result</returns>
-        public static PResult Failed(string errorMsg, string errorSequence, string rest) => new PResult
+        public static PResult Failed(string errorMsg, string errorSequence) => new PResult
         {
             Success = false,
             ErrorMessage = errorMsg,
@@ -53,17 +53,20 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="errorMsg">A descriptive error message</param>
         /// <param name="errorChar">The character that failed to parse</param>
-        /// <param name="rest">Remaining input characters</param>
         /// <returns></returns>
-        public static PResult Failed(string errorMsg, char errorChar, string rest) =>
-            Failed(errorMsg, errorChar.ToString(), rest);
+        public static PResult Failed(string errorMsg, char errorChar) =>
+            Failed(errorMsg, errorChar.ToString());
         /// <summary>
         /// An empty parse result.
         /// Often used within the mechanism of a parser and should not be returned to the user.
         /// </summary>
-        /// <param name="rest">Remaining input characters</param>
         /// <returns>Empty parse result</returns>
-        public static PResult Empty(string rest) => Succeeded(Node.Empty);
+        public static PResult Empty() => Succeeded(Node.Empty);
+
+        internal static PResult EndOfInput(params APCSharp.Parser.Parser[] parsers) =>
+            Failed(Error.Unexpected("end of input", parsers), '\0');
+
+
 
         protected PResult(){}
 
@@ -85,12 +88,12 @@ namespace APCSharp.Parser
         /// </summary>
         // ReSharper disable once InconsistentNaming
         public new Node<TNode> AST { get; internal set; }
-        public static PResult<TNode> Succeeded(Node<TNode> node, string rest) => new PResult<TNode>
+        public static PResult<TNode> Succeeded(Node<TNode> node) => new PResult<TNode>
         {
             Success = true,
             AST = node
         };
-        public static PResult<TNode> Failed(string errorMsg, string rest) => new PResult<TNode>
+        public static PResult<TNode> Failed(string errorMsg) => new PResult<TNode>
         {
             Success = false,
             ErrorMessage = errorMsg,
