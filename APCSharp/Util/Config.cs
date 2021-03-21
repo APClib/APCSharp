@@ -4,6 +4,9 @@ using System.Text;
 
 namespace APCSharp.Util
 {
+    /// <summary>
+    /// Configuration for the APC parser
+    /// </summary>
     public static class Config
     {
         /// <summary>

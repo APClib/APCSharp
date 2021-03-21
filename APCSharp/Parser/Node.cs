@@ -6,7 +6,95 @@ using APCSharp.Util;
 namespace APCSharp.Parser
 {
     /// <summary>
-    /// Default AST Node.
+    /// Default NodeType, should be sufficient for most parsers.
+    /// </summary>
+    public enum NodeType
+    {
+        /// <summary>
+        /// Value is damaged and invalid with no child nodes.
+        /// </summary>
+        Corrupted,
+        /// <summary>
+        /// Used by Maybe() method when generating non-matching result.
+        /// </summary>
+        Empty,
+
+        /// <summary>
+        /// Node Value is of type Char.
+        /// </summary>
+        Char,
+        /// <summary>
+        /// Node Value is null but have child-nodes.
+        /// </summary>
+        List,
+        /// <summary>
+        /// Node Value is of type String or Char.
+        /// </summary>
+        String,
+        /// <summary>
+        /// Node Value is of type String or Char with label Word.
+        /// </summary>
+        Word,
+        /// <summary>
+        /// Node Value is of type String or Char with label Identifier.
+        /// </summary>
+        Identifier,
+        /// <summary>
+        /// Node Value is of type String or Char with label WhiteSpace.
+        /// </summary>
+        WhiteSpace,
+        /// <summary>
+        /// Node Value is of type String or Char with label Newline.
+        /// </summary>
+        Newline,
+        /// <summary>
+        /// Node Value is of type char with label Digit.
+        /// </summary>
+        Digit,
+        /// <summary>
+        /// Node Value is of type String or Char with label Integer.
+        /// </summary>
+        Integer,
+        /// <summary>
+        /// Node Value is of type String or Char with label Number.
+        /// </summary>
+        Number,
+        /// <summary>
+        /// Node Value is of type Object.
+        /// </summary>
+        Object,
+        /// <summary>
+        /// Node Value is a Pair of Nodes.
+        /// </summary>
+        Pair,
+    }
+    
+    /// <summary>
+    /// The kind of data a node contains.
+    /// </summary>
+    public enum NodeData
+    {
+        /// <summary>
+        /// The node is missing both a value and child nodes
+        /// </summary>
+        NoData,
+        /// <summary>
+        /// Just a value
+        /// </summary>
+        Value,
+        /// <summary>
+        /// Just child nodes
+        /// </summary>
+        Children,
+        /// <summary>
+        /// Both value and child nodes
+        /// </summary>
+        ValueAndChildren
+    }
+
+
+    /// <summary>
+    /// Default AST Node with NodeType.
     /// </summary>
     public class Node
     {
@@ -106,7 +194,7 @@ namespace APCSharp.Parser
             if (Type == NodeType.Corrupted) return indent + "Node { Type: Corrupted }";
             string result = indent + $"Node {{ Type: {Type}"; 
 
-            if (Value != null) result += $", Value: \"{(Value.ToString() as string).ValueToHRT()}\" ({Value.GetType().ToString()}) ";
+            if (Value != null) result += $", Value: '{(Value.ToString() as string).ValueToHRT()}'";
             if (Children.Count > 0)
             {
                 result += ", Children:\n";
@@ -131,21 +219,29 @@ namespace APCSharp.Parser
 
 
 
-
-
+    
+    
+    /// <summary>
+    /// AST Node with generic node type.
+    /// </summary>
+    /// <typeparam name="TNode">Enum describing nodes</typeparam>
     public class Node<TNode> : Node where TNode : struct, IConvertible
     {
         /// <summary>
         /// Generic node type.
         /// </summary>
         public new TNode Type { get; internal set; }
+        /// <summary>
+        /// Child nodes of current Node.
+        /// </summary>
+        public new List<Node<TNode>> Children { get; set; }
 
         /// <summary>
         /// Create a new Node.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
-        /// <param name="children">Any childnodes</param>
+        /// <param name="children">Any child nodes</param>
         public Node(TNode type, dynamic value, params Node<TNode>[] children)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
@@ -158,7 +254,7 @@ namespace APCSharp.Parser
         /// Create a new Node but leave value control to subclasses.
         /// </summary>
         /// <param name="type">Type of Node</param>
-        /// <param name="children">Any childnodes</param>
+        /// <param name="children">Any child nodes</param>
         internal Node(TNode type, params Node<TNode>[] children)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
@@ -167,10 +263,9 @@ namespace APCSharp.Parser
             Children = new List<Node<TNode>>(children);
         }
         /// <summary>
-        /// Create a new Node without childnodes and leave value control to subclasses.
+        /// Create a new Node without child nodes and leave value control to subclasses.
         /// </summary>
         /// <param name="type">Type of Node</param>
-        /// <param name="value">Value to hold</param>
         internal Node(TNode type)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("T must be an enumerated type");
@@ -179,7 +274,7 @@ namespace APCSharp.Parser
             Children = new List<Node<TNode>>();
         }
         /// <summary>
-        /// Create a new Node without childnodes.
+        /// Create a new Node without child nodes.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
@@ -191,9 +286,5 @@ namespace APCSharp.Parser
             Value = value;
             Children = new List<Node<TNode>>();
         }
-        /// <summary>
-        /// Child nodes of current Node.
-        /// </summary>
-        public new List<Node<TNode>> Children { get; set; }
     }
 }

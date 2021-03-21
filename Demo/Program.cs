@@ -26,7 +26,7 @@ namespace Demo
                 if (result.Success)
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine(result.ResultNode.ToString());
+                    Console.WriteLine(result.AST.ToString());
                     Console.ForegroundColor = ConsoleColor.DarkGray;
                     Console.WriteLine($"Remaining ({result.Remaining.Length}): '{result.Remaining}'");
                 }

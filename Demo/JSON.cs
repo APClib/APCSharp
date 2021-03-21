@@ -45,7 +45,7 @@ namespace Demo
                 .FollowedBy(
                     Parser.CharsBut(new[] {'\\'}, '"')
                         .OneOrMore()
-                        .Map(Combiner.String, NodeType.String)
+                        .ListToString()
                 )
                 .FollowedBy(
                     Parser.Char('"')
@@ -70,7 +70,7 @@ namespace Demo
 
         internal static ParserBuilder ArrayParser =
             Parser.Char('[')
-            .IgnoredArbitraryWhitespaces()
+            .IgnoreAnyWhitespaces()
             .FollowedBy(
                         Parser.AnyOf(
                             JsonNull.NullParser,
@@ -81,9 +81,9 @@ namespace Demo
                             // JSONArray.arrayParser
                         )
                     )
-                    .IgnoredArbitraryWhitespaces()
+                    .IgnoreAnyWhitespaces()
                     .FollowedBy(Parser.Char(','))
-                    .IgnoredArbitraryWhitespaces()
+                    .IgnoreAnyWhitespaces()
                     .OneOrMore()
                     .FollowedBy(Parser.Char(']'))
             .Or(Parser.Char(']'));
@@ -106,9 +106,9 @@ namespace Demo
                 Parser.Word,
                 Parser.Integer
             )
-            .IgnoredArbitraryWhitespaces()
+            .IgnoreAnyWhitespaces()
             .FollowedBy(Parser.Char(':'))
-            .IgnoredArbitraryWhitespaces()
+            .IgnoreAnyWhitespaces()
             .Map(Combiner.First, NodeType.String)
             .FollowedBy(
                 Parser.AnyOf(
@@ -123,12 +123,12 @@ namespace Demo
 
         internal static ParserBuilder ObjectParser =
             Parser.Char('{')
-                .ArbitraryWhitespaces()
+                .IgnoreAnyWhitespaces()
                 // Key: Value, pairs
                 .FollowedBy(
                     KeyValueParser
                     .FollowedBy(Parser.Char(','))
-                    .IgnoredArbitraryWhitespaces()
+                    .IgnoreAnyWhitespaces()
                 )
                 .ZeroOrMore().Maybe()
                 .FollowedBy(KeyValueParser)
@@ -144,9 +144,9 @@ namespace Demo
             else Console.WriteLine(pr.ErrorMessage);
 
             if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + pr.Remaining);
-            for (int i = 0; i < pr.ResultNode.Children.Count; i++)
+            for (int i = 0; i < pr.AST.Children.Count; i++)
             {
-                Node n = (Node)pr.ResultNode.Children[i];
+                Node n = (Node)pr.AST.Children[i];
                 result[n.Value] = n.Children;
             }
 

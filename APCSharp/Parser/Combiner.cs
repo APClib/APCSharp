@@ -5,18 +5,29 @@ using System.Text;
 
 namespace APCSharp.Parser
 {
+    /// <summary>
+    /// What type of node the combiner supports
+    /// </summary>
     public enum CombinerType
     {
         /// <summary>
-        /// Node where the Value field is not expected to be null.
+        /// Require nodes with a set Value field
         /// </summary>
-        Elements,
+        OnValue,
         /// <summary>
-        /// Node with one or more Child nodes.
+        /// Require nodes with Children
         /// </summary>
-        Lists
+        OnChildren,
+        /// <summary>
+        /// Require nodes with Values and Children
+        /// </summary>
+        OnValueAndChildren
     }
 
+
+    /// <summary>
+    /// AST Transformation on nodes or lists of nodes
+    /// </summary>
     public class Combiner
     {
         /// <summary>
@@ -33,7 +44,7 @@ namespace APCSharp.Parser
         /// Create a new combiner Function assuming Nodes are Elements.
         /// </summary>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(Func<Node, Node?, Node> func) : this(CombinerType.Elements, func) { }
+        public Combiner(Func<Node, Node?, Node> func) : this(CombinerType.OnValue, func) { }
 
         /// <summary>
         /// Create a new combiner.
@@ -68,7 +79,11 @@ namespace APCSharp.Parser
         /// <param name="n2">Second Node. (May be null)</param>
         /// <returns>Node composed of two other Nodes</returns>
         public Node Combine(Node n1, Node? n2) => Func(n1, n2);
-
+        /// <summary>
+        /// Name a combiner
+        /// </summary>
+        /// <param name="name">name</param>
+        /// <returns>Named combiner</returns>
         public Combiner NameBinder(string name)
         {
             Name = name;
@@ -82,7 +97,7 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="type">Result type</param>
         /// <returns>A new string combiner with a custom result type</returns>
-        public static Combiner TypedString(NodeType type) => new Combiner((p1, p2) => new Node(type, (p1.Value?.ToString() ?? string.Empty) + (p2?.Value?.ToString() ?? string.Empty)));
+        public static Combiner TypedString(Node.NodeType type) => new Combiner((p1, p2) => new Node(type, (p1.Value?.ToString() ?? string.Empty) + (p2?.Value?.ToString() ?? string.Empty)));
         /// <summary>
         /// Preset combiner that concatenates the two Nodes values to a string.
         /// </summary>
@@ -94,18 +109,21 @@ namespace APCSharp.Parser
         /// <summary>
         /// Discard the second Node.
         /// </summary>
-        public static Combiner First = new Combiner(CombinerType.Lists, (n1, n2) => n1).NameBinder("First");
+        public static Combiner First = new Combiner(CombinerType.OnChildren, (n1, n2) => n1).NameBinder("First");
         /// <summary>
         /// Discard the first Node.
         /// </summary>
-        public static Combiner Second = new Combiner(CombinerType.Lists, (n1, n2) => n2 ?? n1).NameBinder("Second");
+        public static Combiner Second = new Combiner(CombinerType.OnChildren, (n1, n2) => n2 ?? n1).NameBinder("Second");
         
     }
 
 
 
-
-
+    
+    /// <summary>
+    /// AST Transformation on nodes or lists of nodes
+    /// </summary>
+    /// <typeparam name="TNode">Enum for custom node types</typeparam>
     public class Combiner<TNode> : Combiner where TNode : struct, IConvertible
     {
         /// <summary>
@@ -117,7 +135,7 @@ namespace APCSharp.Parser
         /// Create a new combiner Function assuming Nodes are Elements.
         /// </summary>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(Func<Node<TNode>, Node<TNode>, Node<TNode>> func) : this(CombinerType.Elements, func) { }
+        public Combiner(Func<Node<TNode>, Node<TNode>, Node<TNode>> func) : this(CombinerType.OnValue, func) { }
         /// <summary>
         /// Create a new combiner.
         /// </summary>
