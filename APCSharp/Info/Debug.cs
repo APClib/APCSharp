@@ -15,7 +15,7 @@ namespace APCSharp.Info
         /// <param name="message"></param>
         public static void Print(string message)
         {
-            if (Config.DebugInfo) Console.WriteLine($"Debug Info ({SharedData.LineColumn}): " + message.ValueToHRT());
+            if (Config.Verbose) Console.WriteLine($"Debug Info ({SharedData.LineColumn}): " + message.ValueToHRT());
         }
     }
 }
