@@ -50,7 +50,7 @@ namespace Demo
                 .FollowedBy(
                     Parser.Char('"')
                 )
-                .ListMap((n1, n2) => n1.Children[1], NodeType.String); // Extract string value
+                .MapChildren((n1, n2) => n1.Children[1], NodeType.String); // Extract string value
     }
     public class JsonNumber : JsonBase<decimal>
     {
@@ -119,7 +119,7 @@ namespace Demo
                     JSONObject.lazyObjectParser,
                     JSONArray.arrayParser*/
                 )
-            ).ListMap((n1, n2) => Node.List(n1, n2), NodeType.Pair).InfoBinder("Key-Value", "Key value pair");
+            ).MapChildren((n1, n2) => Node.List(n1, n2), NodeType.Pair).InfoBinder("Key-Value", "Key value pair");
 
         internal static ParserBuilder ObjectParser =
             Parser.Char('{')
