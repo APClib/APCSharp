@@ -43,7 +43,7 @@ namespace Demo
         internal static ParserBuilder StringParser =
             Parser.Char('"')
                 .FollowedBy(
-                    Parser.CharsBut(new[] {'\\'}, '"')
+                    Parser.CharBut('\\', '"')
                         .OneOrMore()
                         .ListToString()
                 )
@@ -143,7 +143,8 @@ namespace Demo
             if (pr.Success) Console.WriteLine(pr);
             else Console.WriteLine(pr.ErrorMessage);
 
-            if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + pr.Remaining);
+            string remaining = pr.Stream.ReadToEnd();
+            if (!pr.Success) throw new FormatException(pr.ErrorMessage + "\n\nRemaining:\n" + remaining);
             for (int i = 0; i < pr.AST.Children.Count; i++)
             {
                 Node n = (Node)pr.AST.Children[i];

@@ -16,6 +16,10 @@ namespace APCSharp.Util
         /// <summary>
         /// Print debug info from each parser Function.
         /// </summary>
-        public static bool DebugInfo = false;
+        public static bool Verbose = false;
+        public static Dictionary<string, char> StandardCharMapping = new Dictionary<string, char>
+        {
+            ["\\n"] = '\n'
+        };
     }
 }

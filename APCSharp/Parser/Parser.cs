@@ -1,4 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 using APCSharp.Info;
 using APCSharp.Util;
 
@@ -9,35 +13,70 @@ namespace APCSharp.Parser
     /// </summary>
     public class Parser
     {
-        internal Func<string, PResult> Func;
-        public PResult Run(string s)
-        {
-            Data.SharedData.LineColumn.Reset();
-            return Func(s);
-        }
-        
-        protected Parser() {}
-        public Parser(Func<string, PResult> func)
+        internal string Type { get; set; }
+        internal dynamic SpecificValue { get; set; }
+        internal Func<StreamReader, PResult> Func;
+        public Parser(Func<StreamReader, PResult> func)
         {
             Func = func;
         }
 
-        public Parser(string type, Func<string, PResult> Func) : this(Func)
+        public Parser(string type, Func<StreamReader, PResult> func) : this(func)
         {
             Type = type;
         }
-        public Parser(string type, dynamic specificValue, Func<string, PResult> Func) : this(type, Func)
+        public Parser(string type, dynamic specificValue, Func<string, PResult> func) : this(type, func)
         {
-            SpecificValue = specificValue.ToString();
+            SpecificValue = specificValue;
         }
-        internal string Type { get; set; }
-        internal string SpecificValue { get; set; }
+        public Parser(string type)
+        {
+            Type = type;
+        }
+        public Parser(string type, dynamic specificValue) : this(type)
+        {
+            SpecificValue = specificValue;
+        }
+        protected Parser() {}
+
+
+        /// <summary>
+        /// Parse text from stream.
+        /// </summary>
+        /// <param name="sourceStream">Source input stream</param>
+        /// <param name="encoding">Stream encoding</param>
+        /// <returns></returns>
+        public PResult Run(Stream sourceStream, Encoding encoding)
+        {
+            Data.SharedData.LineColumn.Reset();
+            return Func(new StreamReader(sourceStream, encoding));
+        }
+        /// <summary>
+        /// Parse unicode text from stream.
+        /// </summary>
+        /// <param name="sourceStream">Source input stream</param>
+        /// <returns></returns>
+        public PResult Run(Stream sourceStream) => Run(sourceStream, Encoding.UTF8);
+        /// <summary>
+        /// Parse text.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="encoding">Text encoding</param>
+        /// <returns></returns>
+        public PResult Run(string input, Encoding encoding) => Run(new MemoryStream(encoding.GetBytes(input ?? "")), encoding);
+        /// <summary>
+        /// Parse unicode text.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public PResult Run(string input) => Run(input, Encoding.UTF8);
+
         internal string GetMatchString()
         {
-            if (!string.IsNullOrEmpty(SpecificValue) && !string.IsNullOrEmpty(Type)) return Type + $" '{SpecificValue}'";
-            else if (!string.IsNullOrEmpty(SpecificValue)) return $"'{SpecificValue}'";
-            else if (!string.IsNullOrEmpty(Type)) return Type;
-            else return null;
+            if (SpecificValue != null && !string.IsNullOrEmpty(Type)) return $"{Type} '{SpecificValue.ToString()}'";
+            if (SpecificValue != null) return $"'{SpecificValue.ToString()}'";
+            if (!string.IsNullOrEmpty(Type)) return Type;
+            return string.Empty;
         }
         
 
@@ -45,7 +84,7 @@ namespace APCSharp.Parser
         /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
         /// </summary>
         /// <returns></returns>
-        public static ParserBuilder Lazy(ParserBuilder parser) => new ParserBuilder((string s) => parser.Func(s));
+        public static ParserBuilder Lazy(ParserBuilder parser) => new ParserBuilder(s => parser.Func(s));
 
 
         #region Preset Parsers
@@ -59,17 +98,19 @@ namespace APCSharp.Parser
         /// <returns>Parser for any character between n and m</returns>
         public static ParserBuilder InRange(char n, char m, NodeType charType)
         {
-            ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m, null);
-            parser.Func = (string s) =>
+            ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m);
+            parser.Func = s =>
             {
-                if (!string.IsNullOrEmpty(s))
+                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                char c = (char) s.Peek();
+                if (c >= n && c <= m)
                 {
-                    Debug.Print("Parsed char '" + s[0] + "'");
-                    ProcessChar(s[0]);
-                    if (s[0] >= n && s[0] <= m) return PResult.Succeeded(new Node(charType, s[0]), s.Remove(0, 1));
-                    else return PResult.Failed(Error.Unexpected(s[0], parser), s[0].ToString(), s.Remove(0, 1));
+                    Debug.Print("Parsed char '" + c + "'");
+                    ProcessChar(c);
+                    return PResult.Succeeded(new Node(charType, (char)s.Read()), s);
                 }
-                return PResult.Failed(Error.Unexpected("end of input", parser), "", null);
+                return PResult.Failed(Error.Unexpected(c, parser), c, s);
+                
             };
             return parser;
         }
@@ -99,22 +140,25 @@ namespace APCSharp.Parser
         /// <param name="m">Upper character bound></param>
         /// <returns>Parser for any character between n and m</returns>
         public static ParserBuilder InRange(char n, char m) => InRange(n, m, NodeType.Char);
-        public static ParserBuilder Char(char c)
+        /// <summary>
+        /// Only match a specific character.
+        /// </summary>
+        /// <param name="m">character to match</param>
+        /// <returns>Single character parser</returns>
+        public static ParserBuilder Char(char m)
         {
-            ParserBuilder parser = new ParserBuilder("character", c, null);
-            parser.Func = (string s) =>
+            ParserBuilder parser = new ParserBuilder("character", m);
+            parser.Func = s =>
             {
-                if (!string.IsNullOrEmpty(s))
+                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                char c = (char) s.Peek();
+                if (c == m)
                 {
-                    if (s[0] == c)
-                    {
-                        Debug.Print("Parsed char '" + c + "'");
-                        ProcessChar(s[0]);
-                        return PResult.Succeeded(new Node(NodeType.Char, c), s.Remove(0, 1));
-                    }
-                    else return PResult.Failed(Error.Unexpected(s[0], parser), s[0].ToString(), s.Remove(0, 1));
+                    Debug.Print("Parsed char '" + m + "'");
+                    ProcessChar(c);
+                    return PResult.Succeeded(new Node(NodeType.Char, (char)s.Read()), s);
                 }
-                return PResult.Failed(Error.Unexpected("end of input", parser), "", null);
+                return PResult.Failed(Error.Unexpected(c, parser), c, s);
             };
             return parser;
         }
@@ -133,35 +177,49 @@ namespace APCSharp.Parser
             parser.SpecificValue = s;
             return parser;
         }
-
-        public static ParserBuilder CharsBut(params char[] c) => CharsBut(new char[] { }, c);
         /// <summary>
-        /// Matching all characters but a number of given ones. Those can be accepted anyways if they are escaped using a prefix character.
+        /// Matching all characters but a number of given ones. Special characters are taken from the Config.StandardCharMapping dictionary
+        /// and are escaped using backslash '\'. All other escaped characters that are not in the escaped character mapping are invalid and causes a parse failure.
         /// </summary>
-        /// <param name="escaping">Allowed prefix characters to escape.</param>
-        /// <param name="c">non-allowed characters</param>
+        /// <param name="nonAllowedChars">Non-allowed characters</param>
         /// <returns></returns>
-        public static ParserBuilder CharsBut(char[] escaping, params char[] c)
+        public static ParserBuilder CharBut(params char[] nonAllowedChars) => CharBut('\\', Config.StandardCharMapping, nonAllowedChars);
+
+        /// <summary>
+        /// Matching all characters but a number of given ones.
+        /// If an escaped character is a special character, e.g \n, add that to the escaped character mapping dictionary like "\\n" = '\n'.
+        /// All other escaped characters that are not in the escaped character mapping are invalid and causes a parse failure.
+        /// </summary>
+        /// <param name="escapeChar">Prefix to escape special characters</param>
+        /// <param name="escapedCharMapping">Escaped character mapping</param>
+        /// <param name="nonAllowedChars">Non-allowed characters</param>
+        /// <returns>Single char parser</returns>
+        public static ParserBuilder CharBut(char? escapeChar, Dictionary<string, char> escapedCharMapping, params char[] nonAllowedChars)
         {
-            ParserBuilder parser = new ParserBuilder("characters but", c.ArrayToString(), null);
-            parser.Func = (string s) =>
+            ParserBuilder parser = new ParserBuilder("characters but", nonAllowedChars.ArrayToString());
+            parser.Func = s =>
             {
-                if (!string.IsNullOrEmpty(s)) // Refactor this 'if' into ProcessChar
+                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                char c = (char) s.Peek();
+                if (escapeChar == c)
                 {
-                    ProcessChar(s[0]);
-                    int ci = 0;
-                    for (int j = 0; j < escaping.Length; j++)
+                    s.Read(); // Consume escape character
+                    if (s.Peek() == -1) return PResult.EndOfInput(parser); // Peek the escaped character
+                    string escaped = c.ToString() + (char)s.Read(); // Read the escaped character and concatenate it with the escape character, e.g "\" + 'n' = "\n"
+
+                    if (escapedCharMapping.ContainsKey(escaped))
                     {
-                        if (s[ci] == escaping[j]) ci = 1;
+                        Debug.Print("Parsed char '" + escaped + "'");
+                        ProcessChar(c);
+                        return PResult.Succeeded(new Node(NodeType.Char, escapedCharMapping[escaped]), s);
                     }
-                    for (int i = 0; i < c.Length; i++)
-                    {
-                        if (s[ci] == c[i]) return PResult.Failed(Error.Unexpected(s[0], parser), s[0].ToString(), s.Remove(0, 1));
-                    }
-                    Debug.Print("Parsed char '" + s[ci] + "'");
-                    return PResult.Succeeded(new Node(NodeType.Char, s[ci]), s.Remove(0, 1));
+                    return PResult.Failed(Error.Unexpected(escaped, parser), escaped, s);
                 }
-                return PResult.Failed(Error.Unexpected("end of input", parser), "", null);
+                if (nonAllowedChars.Contains(c)) return PResult.Failed(Error.Unexpected(c, parser), c, s);
+                
+                Debug.Print("Parsed char '" + c + "'");
+                ProcessChar(c);
+                return PResult.Succeeded(new Node(NodeType.Char, (char)s.Read()), s);
             };
             return parser;
         }
@@ -207,11 +265,11 @@ namespace APCSharp.Parser
         /// <summary>
         /// String of just letters.
         /// </summary>
-        public static ParserBuilder Word = Letters.Map(NodeType.Word).InfoBinder("word");
+        public static ParserBuilder Word = Letters.Map(Combiner.String, NodeType.Word).InfoBinder("word");
         /// <summary>
         /// One or more digits.
         /// </summary>
-        public static ParserBuilder Integer = Digit.OneOrMore().Map(NodeType.Integer).InfoBinder("integer");
+        public static ParserBuilder Integer = Digit.OneOrMore().Map(Combiner.String, NodeType.Integer).InfoBinder("integer");
         /// <summary>
         /// An integer followed by a '.' and another integer.
         /// </summary>
@@ -249,30 +307,87 @@ namespace APCSharp.Parser
     /// <typeparam name="TNode">Node Enum Types</typeparam>
     public class Parser<TNode> : Parser where TNode : struct, IConvertible
     {
-        internal new Func<string, PResult<TNode>> Func;
+        internal new Func<StreamReader, PResult<TNode>> Func;
 
-        public Parser(Func<string, PResult<TNode>> func)
+        public Parser(Func<StreamReader, PResult<TNode>> func)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
             Func = func;
         }
-
-        public Parser(string type, Func<string, PResult<TNode>> func) : this(func)
+        
+        public Parser(string type, Func<StreamReader, PResult<TNode>> func) : this(func)
         {
             Type = type;
         }
-        public Parser(string type, dynamic specificValue, Func<string, PResult<TNode>> func) : this(type, func)
+        public Parser(string type, dynamic specificValue) : this(type)
         {
-            SpecificValue = specificValue.ToString();
+            SpecificValue = specificValue;
+        }
+        public Parser(string type)
+        {
+            Type = type;
+        }
+        public Parser(string type, dynamic specificValue, Func<StreamReader, PResult<TNode>> func) : this(type, func)
+        {
+            SpecificValue = specificValue;
         }
         
-        public new PResult<TNode> Run(string s)
+
+        /// <summary>
+        /// Parse text from stream.
+        /// </summary>
+        /// <param name="sourceStream">Source input stream</param>
+        /// <param name="encoding">Stream encoding</param>
+        /// <returns></returns>
+        public new PResult<TNode> Run(Stream sourceStream, Encoding encoding)
         {
             Data.SharedData.LineColumn.Reset();
-            return Func(s);
+            return Func(new StreamReader(sourceStream, encoding));
         }
+        /// <summary>
+        /// Parse unicode text from stream.
+        /// </summary>
+        /// <param name="sourceStream">Source input stream</param>
+        /// <returns></returns>
+        public new PResult<TNode> Run(Stream sourceStream) => Run(sourceStream, Encoding.UTF8);
+        /// <summary>
+        /// Parse text.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="encoding">Text encoding</param>
+        /// <returns></returns>
+        public new PResult<TNode> Run(string input, Encoding encoding) => Run(new MemoryStream(encoding.GetBytes(input ?? "")), encoding);
+        /// <summary>
+        /// Parse unicode text.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
+        public new PResult<TNode> Run(string input) => Run(input, Encoding.UTF8);
 
-        #region Preset Parsers
+
+        /// <summary>
+        /// Only match a specific character.
+        /// </summary>
+        /// <param name="m">Character to match</param>
+        /// <param name="type">The type of the matched character</param>
+        /// <returns>Single character parser</returns>
+        public static ParserBuilder<TNode> Char(char m, TNode type)
+        {
+            ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character", m);
+            parser.Func = s =>
+            {
+                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(parser);
+                char c = (char) s.Peek();
+                if (c == m)
+                {
+                    Debug.Print("Parsed char '" + m + "'");
+                    ProcessChar(c);
+                    return PResult<TNode>.Succeeded(new Node<TNode>(type, (char)s.Read()), s);
+                }
+                return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
+            };
+            return parser;
+        }
         /// <summary>
         /// Accepts character if in range of n and m and set a custom named NodeType.
         /// </summary>
@@ -282,22 +397,23 @@ namespace APCSharp.Parser
         /// <returns>Parser for any character between n and m</returns>
         public static ParserBuilder<TNode> InRange(char n, char m, TNode charType)
         {
-            ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character in range " + n + " to " + m, null);
-            parser.Func = (string s) =>
+            ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character in range " + n + " to " + m);
+            parser.Func = s =>
             {
-                if (!string.IsNullOrEmpty(s))
+                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(parser);
+                char c = (char) s.Peek();
+
+                if (c >= n && c <= m)
                 {
-                    Debug.Print("Parsed char '" + s[0] + "'");
-                    ProcessChar(s[0]);
-                    if (s[0] >= n && s[0] <= m) return PResult<TNode>.Succeeded(new Node<TNode>(charType, s[0]), s.Remove(0, 1));
-                    else return PResult<TNode>.Failed(Error.Unexpected(s[0], parser), s.Remove(0, 1));
+                    Debug.Print("Parsed char '" + c + "'");
+                    ProcessChar(c);
+                    return PResult<TNode>.Succeeded(new Node<TNode>(charType, (char)s.Read()), s);
                 }
-                return PResult<TNode>.Failed(Error.Unexpected("end of input", parser), null);
+                return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
             };
             return parser;
         }
 
-        #endregion
         public static ParserBuilder<TNode> InfoBinder(string type, ParserBuilder<TNode> parser) => InfoBinder(type, null, parser);
         public static ParserBuilder<TNode> InfoBinder(string type, string specificValue, ParserBuilder<TNode> parser)
         {

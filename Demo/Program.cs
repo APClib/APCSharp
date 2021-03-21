@@ -28,7 +28,8 @@ namespace Demo
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine(result.AST.ToString());
                     Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.WriteLine($"Remaining ({result.Remaining.Length}): '{result.Remaining}'");
+                    string remaining = result.Stream.ReadToEnd();
+                    Console.WriteLine($"Remaining ({remaining.Length}): '{remaining}'");
                 }
                 else
                 {
@@ -51,7 +52,7 @@ namespace Demo
                         Parser.Char('.')
                     )
                  )
-                .FollowedBy(Parser.WhiteSpaces.Maybe()).RemoveEmptyMaybeMatches().OneOrMore()
+                .FollowedBy(Parser.WhiteSpaces.Maybe()).OneOrMore()
                 .FollowedBy(Parser.AnyOf(
                     Parser.Char('!'),
                     Parser.Char('?'),

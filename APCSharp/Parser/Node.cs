@@ -192,7 +192,7 @@ namespace APCSharp.Parser
         public string ToString(string indent)
         {
             if (Type == NodeType.Corrupted) return indent + "Node { Type: Corrupted }";
-            string result = indent + $"Node {{ Type: {Type}"; 
+            string result = indent + $"{GetType().Name} {{ Type: {Type}"; 
 
             if (Value != null) result += $", Value: '{(Value.ToString() as string).ValueToHRT()}'";
             if (Children.Count > 0)

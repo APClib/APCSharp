@@ -96,7 +96,7 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="type">Result type</param>
         /// <returns>A new string combiner with a custom result type</returns>
-        public static Combiner TypedString(NodeType type) => new Combiner((p1, p2) => new Node(type, (p1.Value?.ToString() ?? string.Empty) + (p2?.Value?.ToString() ?? string.Empty)));
+        public static Combiner TypedString(NodeType type) => new Combiner(CombinerType.OnValue, (p1, p2) => new Node(type, (p1.Value?.ToString() ?? string.Empty) + (p2?.Value?.ToString() ?? string.Empty)));
         /// <summary>
         /// Preset combiner that concatenates the two Nodes values to a string.
         /// </summary>
