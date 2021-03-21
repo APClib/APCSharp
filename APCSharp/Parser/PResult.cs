@@ -12,10 +12,6 @@ namespace APCSharp.Parser
         // ReSharper disable once InconsistentNaming
         public Node AST { get; internal set; }
         /// <summary>
-        /// Sequence of remaining non-parsed input characters
-        /// </summary>
-        public string Remaining { get; internal set; }
-        /// <summary>
         /// Indicates if the paring was successful
         /// </summary>
         public bool Success { get; internal set; }
@@ -33,11 +29,10 @@ namespace APCSharp.Parser
         /// <param name="node">Root AST</param>
         /// <param name="rest">Remaining input characters</param>
         /// <returns>Successful parse result</returns>
-        public static PResult Succeeded(Node node, string rest) => new PResult
+        public static PResult Succeeded(Node node) => new PResult
         {
             Success = true,
-            AST = node,
-            Remaining = rest
+            AST = node
         };
         /// <summary>
         /// Constructor for a failed parse result
@@ -51,23 +46,31 @@ namespace APCSharp.Parser
             Success = false,
             ErrorMessage = errorMsg,
             ErrorSequence = errorSequence,
-            AST = Node.Corrupted,
-            Remaining = rest
+            AST = Node.Corrupted
         };
+        /// <summary>
+        /// Constructor for a failed parse result
+        /// </summary>
+        /// <param name="errorMsg">A descriptive error message</param>
+        /// <param name="errorChar">The character that failed to parse</param>
+        /// <param name="rest">Remaining input characters</param>
+        /// <returns></returns>
+        public static PResult Failed(string errorMsg, char errorChar, string rest) =>
+            Failed(errorMsg, errorChar.ToString(), rest);
         /// <summary>
         /// An empty parse result.
         /// Often used within the mechanism of a parser and should not be returned to the user.
         /// </summary>
         /// <param name="rest">Remaining input characters</param>
         /// <returns>Empty parse result</returns>
-        public static PResult Empty(string rest) => Succeeded(Node.Empty, rest);
+        public static PResult Empty(string rest) => Succeeded(Node.Empty);
 
         protected PResult(){}
 
         public override string ToString()
         {
-            return Success ? $"PResult {{ Status: Succeeded, Remaining: \"{Remaining}\", AST:\n" + AST.ToString(Util.Config.Indentation) + $"\n}}" :
-                             $"PResult {{ Status: Failed, Message: \"{ErrorMessage}\", Remaining: \"{Remaining}\" }}";
+            return Success ? $"PResult {{ Status: Succeeded, AST:\n" + AST.ToString(Util.Config.Indentation) + $"\n}}" :
+                             $"PResult {{ Status: Failed, Message: \"{ErrorMessage}\" }}";
         }
     }
 
@@ -85,15 +88,13 @@ namespace APCSharp.Parser
         public static PResult<TNode> Succeeded(Node<TNode> node, string rest) => new PResult<TNode>
         {
             Success = true,
-            AST = node,
-            Remaining = rest
+            AST = node
         };
         public static PResult<TNode> Failed(string errorMsg, string rest) => new PResult<TNode>
         {
             Success = false,
             ErrorMessage = errorMsg,
-            AST = default(Node<TNode>),
-            Remaining = rest
+            AST = default(Node<TNode>)
         };
         protected PResult(){}
     }
