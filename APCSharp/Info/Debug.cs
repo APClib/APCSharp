@@ -7,7 +7,7 @@ namespace APCSharp.Info
     /// <summary>
     /// Static class for debug handling.
     /// </summary>
-    public static class Debug
+    internal static class Debug
     {
         /// <summary>
         /// Print the debug message if DebugInfo is enabled in Config.
