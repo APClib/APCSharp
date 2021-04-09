@@ -14,7 +14,8 @@ namespace Demo
         static void MatchDemo()
         {
             Parser equalSignParser = Parser.Char('=').InfoBinder("equal sign '='");
-            Parser identifierParser =  Parser.AnyOf(Parser.Word, Parser.Char('_')).FollowedBy(Parser.AnyOf(Parser.Word, Parser.Char('_'), Parser.Integer).ZeroOrMore().ListToString()).ListToString().InfoBinder("variable identifier");
+            Parser underscoreParser = Parser.Char('_').InfoBinder("underscore '_'");
+            Parser identifierParser =  Parser.AnyOf(Parser.Word, underscoreParser).FollowedBy(Parser.AnyOf(Parser.Word, underscoreParser, Parser.Integer).ZeroOrMore().ListToString()).ListToString().InfoBinder("variable identifier");
 
             while (true)
             {
