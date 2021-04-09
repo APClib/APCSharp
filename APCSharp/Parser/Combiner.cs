@@ -1,39 +1,16 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace APCSharp.Parser
 {
     /// <summary>
-    /// What type of node the combiner supports
-    /// </summary>
-    public enum CombinerType
-    {
-        /// <summary>
-        /// Require nodes with a set Value field
-        /// </summary>
-        OnValue,
-        /// <summary>
-        /// Require nodes with Children
-        /// </summary>
-        OnChildren,
-        /// <summary>
-        /// Require nodes with Values and Children
-        /// </summary>
-        OnValueAndChildren
-    }
-
-
-    /// <summary>
-    /// AST Transformation on nodes or lists of nodes
+    /// AST Transformation on nodes or lists of nodes.
     /// </summary>
     public class Combiner
     {
-        /// <summary>
-        /// Compatible Node types
-        /// </summary>
-        public CombinerType Type { get; protected set; }
         public string Name { get; internal set; }
         /// <summary>
         /// Node combiner Function
@@ -41,31 +18,23 @@ namespace APCSharp.Parser
         internal Func<Node, Node?, Node> Func { get; set; }
 
         /// <summary>
-        /// Create a new combiner Function assuming Nodes are Elements.
-        /// </summary>
-        /// <param name="func">Node combiner Function</param>
-        public Combiner(Func<Node, Node?, Node> func) : this(CombinerType.OnValue, func) { }
-
-        /// <summary>
         /// Create a new combiner.
+        /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
-        /// <param name="type">Compatible Node types</param>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(CombinerType type, Func<Node, Node?, Node> func) : this(string.Empty, type,
-            func) { }
+        public Combiner(Func<Node, Node?, Node> func) : this(string.Empty, func) { }
 
 
         /// <summary>
         /// Create a new combiner.
+        /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
         /// <param name="name">Name</param>
-        /// <param name="type">Compatible Node types</param>
         /// <param name="func">Node combiner Function</param>
-        private Combiner(string name, CombinerType type, Func<Node, Node?, Node> func)
+        private Combiner(string name, Func<Node, Node?, Node> func)
         {
             Func = func;
             Name = name;
-            Type = type;
         }
         protected Combiner() { }
 
@@ -89,6 +58,8 @@ namespace APCSharp.Parser
             return this;
         }
 
+        public static Node RecursiveMap(Node n, Combiner combiner) => new ParserBuilder(s => PResult.Succeeded(n, s)).Map(combiner).Func(StreamReader.Null).AST;
+
 
 
         /// <summary>
@@ -96,7 +67,19 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="type">Result type</param>
         /// <returns>A new string combiner with a custom result type</returns>
-        public static Combiner TypedString(NodeType type) => new Combiner(CombinerType.OnValue, (p1, p2) => new Node(type, (p1.Value?.ToString() ?? string.Empty) + (p2?.Value?.ToString() ?? string.Empty)));
+        public static Combiner TypedString(NodeType type) => new Combiner((p1, p2) => new Node(type, TypedStringProcess(p1, type) + TypedStringProcess(p2, type)));
+
+        private static string TypedStringProcess(Node? n, NodeType type)
+        {
+            if (n == null) return string.Empty;
+            switch (n.Data)
+            {
+                case NodeData.Value: return n.Value?.ToString() ?? string.Empty;
+                case NodeData.Children: return RecursiveMap(n, TypedString(type)).Value?.ToString() ?? string.Empty;
+                case NodeData.ValueAndChildren: return n.Value?.ToString() ?? string.Empty + RecursiveMap(n, TypedString(type)).Value?.ToString() ?? string.Empty;
+                default: return string.Empty;
+            }
+        }
         /// <summary>
         /// Preset combiner that concatenates the two Nodes values to a string.
         /// </summary>
@@ -108,11 +91,11 @@ namespace APCSharp.Parser
         /// <summary>
         /// Discard the second Node.
         /// </summary>
-        public static Combiner First = new Combiner(CombinerType.OnChildren, (n1, n2) => n1).NameBinder("First");
+        public static Combiner First = new Combiner((n1, n2) => n1).NameBinder("First");
         /// <summary>
         /// Discard the first Node.
         /// </summary>
-        public static Combiner Second = new Combiner(CombinerType.OnChildren, (n1, n2) => n2 ?? n1).NameBinder("Second");
+        public static Combiner Second = new Combiner((n1, n2) => n2 ?? n1).NameBinder("Second");
         
     }
 
@@ -120,7 +103,7 @@ namespace APCSharp.Parser
 
     
     /// <summary>
-    /// AST Transformation on nodes or lists of nodes
+    /// AST Transformation on generic nodes or lists of generic nodes.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
     public class Combiner<TNode> : Combiner where TNode : struct, IConvertible
@@ -128,30 +111,24 @@ namespace APCSharp.Parser
         /// <summary>
         /// Node combiner Function
         /// </summary>
-        internal new Func<Node<TNode>, Node<TNode>, Node<TNode>> Func { get; set; }
+        internal new Func<Node<TNode>, Node<TNode>?, Node<TNode>> Func { get; set; }
 
         /// <summary>
-        /// Create a new combiner Function assuming Nodes are Elements.
+        /// Create a new combiner.
+        /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(Func<Node<TNode>, Node<TNode>, Node<TNode>> func) : this(CombinerType.OnValue, func) { }
+        public Combiner(Func<Node<TNode>, Node<TNode>?, Node<TNode>> func) : this(string.Empty, func) {}
         /// <summary>
         /// Create a new combiner.
-        /// </summary>
-        /// <param name="type">Compatible Node types</param>
-        /// <param name="func">Node combiner Function</param>
-        public Combiner(CombinerType type, Func<Node<TNode>, Node<TNode>, Node<TNode>> func) : this(string.Empty, type, func) {}
-        /// <summary>
-        /// Create a new combiner.
+        /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
         /// <param name="name">Name</param>
-        /// <param name="type">Compatible Node types</param>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(string name, CombinerType type, Func<Node<TNode>, Node<TNode>, Node<TNode>> func)
+        public Combiner(string name, Func<Node<TNode>, Node<TNode>?, Node<TNode>> func)
         {
             Func = func;
             Name = name;
-            Type = type;
         }
         /// <summary>
         /// Combine two nodes, n1 and n2, into a single node.
@@ -159,7 +136,7 @@ namespace APCSharp.Parser
         /// <param name="n1">First Node</param>
         /// <param name="n2">Second Node</param>
         /// <returns>Node composed of two other Nodes</returns>
-        public Node<TNode> Combine(Node<TNode> n1, Node<TNode> n2) => Func(n1, n2);
+        public Node<TNode> Combine(Node<TNode> n1, Node<TNode>? n2) => Func(n1, n2);
 
     }
 }
