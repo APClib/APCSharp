@@ -119,7 +119,7 @@ namespace APCSharp.Parser
         /// <returns>String formatted root Node representation.</returns>
         public string ToString(string indent)
         {
-            if (Type == NodeType.Corrupted) return indent + "{ Type: Corrupted }";
+            if (Type == NodeType.Corrupted) return indent + "{GetType().Name} { Type: Corrupted }";
             string result = indent + $"{GetType().Name} {{ Type: {Type}"; 
 
             if (!string.IsNullOrEmpty(Value)) result += $", Value: \"{Value.ValueToHRT()}\"";
