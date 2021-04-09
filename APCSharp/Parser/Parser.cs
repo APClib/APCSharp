@@ -4,51 +4,38 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using APCSharp.Info;
+using APCSharp.Parser.Data;
 using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
     /// <summary>
-    /// Default text parser enough for most parsers.
+    /// Shared abstract interface for parsers.
     /// </summary>
-    public class Parser
+    public abstract class AParser<TParserBuilder, TCombiner, TPResult, TNode>
+        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode>
+        where TCombiner : Combiner
+        where TPResult : PResult
+        where TNode : struct, IConvertible
     {
+        protected static readonly ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode> Error = new ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode>();
         internal string Type { get; set; }
         internal dynamic SpecificValue { get; set; }
-        internal Func<StreamReader, PResult> Func;
-        public Parser(Func<StreamReader, PResult> func)
-        {
-            Func = func;
-        }
+        internal Func<StreamReader, TPResult> Func;
 
-        public Parser(string type, Func<StreamReader, PResult> func) : this(func)
-        {
-            Type = type;
-        }
-        public Parser(string type, dynamic specificValue, Func<string, PResult> func) : this(type, func)
-        {
-            SpecificValue = specificValue;
-        }
-        public Parser(string type)
-        {
-            Type = type;
-        }
-        public Parser(string type, dynamic specificValue) : this(type)
-        {
-            SpecificValue = specificValue;
-        }
-        protected Parser() {}
-
-
+        protected AParser(Func<StreamReader, TPResult> func) { Func = func; }
+        protected AParser(string type, Func<StreamReader, TPResult> func) : this(func) { Type = type; }
+        protected AParser(string type) { Type = type; }
+        
         /// <summary>
         /// Parse text from stream.
         /// </summary>
         /// <param name="sourceStream">Source input stream</param>
         /// <param name="encoding">Stream encoding</param>
         /// <returns></returns>
-        public PResult Run(Stream sourceStream, Encoding encoding)
+        public virtual TPResult Run(Stream sourceStream, Encoding encoding)
         {
-            Data.SharedData.LineColumn.Reset();
+            SharedData.LineColumn.Reset();
             return Func(new StreamReader(sourceStream, encoding));
         }
         /// <summary>
@@ -56,38 +43,73 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="sourceStream">Source input stream</param>
         /// <returns></returns>
-        public PResult Run(Stream sourceStream) => Run(sourceStream, Encoding.UTF8);
+        public virtual TPResult Run(Stream sourceStream) => Run(sourceStream, Encoding.UTF8);
         /// <summary>
         /// Parse text.
         /// </summary>
         /// <param name="input"></param>
         /// <param name="encoding">Text encoding</param>
         /// <returns></returns>
-        public PResult Run(string input, Encoding encoding) => Run(new MemoryStream(encoding.GetBytes(input ?? "")), encoding);
+        public virtual TPResult Run(string input, Encoding encoding) => Run(new MemoryStream(encoding.GetBytes(input ?? "")), encoding);
         /// <summary>
         /// Parse unicode text.
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        public PResult Run(string input) => Run(input, Encoding.UTF8);
+        public virtual TPResult Run(string input) => Run(input, Encoding.UTF8);
 
-        internal string GetMatchString()
+        
+        #region Shared utility methods
+        public string GetMatchString()
         {
             if (SpecificValue != null && !string.IsNullOrEmpty(Type)) return $"{Type} '{SpecificValue.ToString()}'";
             if (SpecificValue != null) return $"'{SpecificValue.ToString()}'";
             if (!string.IsNullOrEmpty(Type)) return Type;
             return string.Empty;
         }
-        
+        protected static void ProcessChar(char c)
+        {
+            Data.SharedData.LineColumn.NextColumn();
+            switch (c)
+            {
+                case '\n':
+                    Data.SharedData.LineColumn.NextLine();
+                    break;
+            }
+        }
 
-        /// <summary>
-        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
-        /// </summary>
-        /// <returns></returns>
-        public static ParserBuilder Lazy(ParserBuilder parser) => new ParserBuilder(s => parser.Func(s));
+        #endregion
+    }
+
+
+
+
+
+
+
+
+    /// <summary>
+    /// Default text parser enough for most parsers.
+    /// </summary>
+    public class Parser : AParser<ParserBuilder, Combiner, PResult, NodeType>
+    {
+        public Parser(Func<StreamReader, PResult> func) : base(func) { }
+        public Parser(string type, Func<StreamReader, PResult> func) : base(type, func) {}
+        public Parser(string type, dynamic specificValue, Func<StreamReader, PResult> func) : base(type, func) { SpecificValue = specificValue; }
+        public Parser(string type, dynamic specificValue) : base(type) { SpecificValue = specificValue; }
+        public Parser(string type) : base(type) {}
+
+
 
 
         #region Preset Parsers
+        
+        /// <summary>
+        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
+        /// </summary>
+        /// <param name="parser">Parser to make lazy</param>
+        /// <returns></returns>
+        public static ParserBuilder Lazy(ParserBuilder parser) => new ParserBuilder(s => parser.Func(s));
 
         /// <summary>
         /// Accepts character if in range of n and m and set a custom named NodeType.
@@ -101,13 +123,13 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (c >= n && c <= m)
                 {
                     Debug.Print("Parsed char '" + c + "'");
                     ProcessChar(c);
-                    return PResult.Succeeded(new Node(charType, (char)s.Read()), s);
+                    return PResult.Succeeded(new Node(charType, ((char)s.Read()).ToString()), s);
                 }
                 return PResult.Failed(Error.Unexpected(c, parser), c, s);
                 
@@ -123,6 +145,8 @@ namespace APCSharp.Parser
             for (i++; i < parsers.Length; i++) last = last.FollowedBy(parsers[i]).ListToString();
             return last;
         }
+
+        public static ParserBuilder AnyOf(params Parser[] parsers) => AnyOf(parsers.ArrayCast<ParserBuilder, Parser>());
         public static ParserBuilder AnyOf(params ParserBuilder[] parsers)
         {
             if (parsers.Length == 1) return parsers[0];
@@ -150,13 +174,13 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("character", m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (c == m)
                 {
                     Debug.Print("Parsed char '" + m + "'");
                     ProcessChar(c);
-                    return PResult.Succeeded(new Node(NodeType.Char, (char)s.Read()), s);
+                    return PResult.Succeeded(new Node(NodeType.Char, ((char)s.Read()).ToString()), s);
                 }
                 return PResult.Failed(Error.Unexpected(c, parser), c, s);
             };
@@ -199,19 +223,19 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("characters but", nonAllowedChars.ArrayToString());
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(parser);
+                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (escapeChar == c)
                 {
                     s.Read(); // Consume escape character
-                    if (s.Peek() == -1) return PResult.EndOfInput(parser); // Peek the escaped character
+                    if (s.Peek() == -1) return PResult.EndOfInput(Error, parser); // Peek the escaped character
                     string escaped = c.ToString() + (char)s.Read(); // Read the escaped character and concatenate it with the escape character, e.g "\" + 'n' = "\n"
 
                     if (escapedCharMapping.ContainsKey(escaped))
                     {
                         Debug.Print("Parsed char '" + escaped + "'");
                         ProcessChar(c);
-                        return PResult.Succeeded(new Node(NodeType.Char, escapedCharMapping[escaped]), s);
+                        return PResult.Succeeded(new Node(NodeType.Char, escapedCharMapping[escaped].ToString()), s);
                     }
                     return PResult.Failed(Error.Unexpected(escaped, parser), escaped, s);
                 }
@@ -219,12 +243,11 @@ namespace APCSharp.Parser
                 
                 Debug.Print("Parsed char '" + c + "'");
                 ProcessChar(c);
-                return PResult.Succeeded(new Node(NodeType.Char, (char)s.Read()), s);
+                return PResult.Succeeded(new Node(NodeType.Char, ((char)s.Read()).ToString()), s);
             };
             return parser;
         }
 
-        #region Meta Parsers
         public static ParserBuilder InfoBinder(string type, ParserBuilder parser) => InfoBinder(type, null, parser);
         public static ParserBuilder InfoBinder(string type, string specificValue, ParserBuilder parser)
         {
@@ -233,22 +256,6 @@ namespace APCSharp.Parser
             return parser;
         }
 
-        #endregion
-
-        #region Process Char
-
-        internal static void ProcessChar(char c)
-        {
-            Data.SharedData.LineColumn.NextColumn();
-            switch (c)
-            {
-                case '\n':
-                    Data.SharedData.LineColumn.NextLine();
-                    break;
-            }
-        }
-
-        #endregion
 
         /// <summary>
         /// A letter from A-z. Does not support unicode.
@@ -305,64 +312,13 @@ namespace APCSharp.Parser
     /// Generic Text parser.
     /// </summary>
     /// <typeparam name="TNode">Node Enum Types</typeparam>
-    public class Parser<TNode> : Parser where TNode : struct, IConvertible
+    public class Parser<TNode> : AParser<ParserBuilder<TNode>, Combiner<TNode>, PResult<TNode>, TNode> where TNode : struct, IConvertible
     {
-        internal new Func<StreamReader, PResult<TNode>> Func;
-
-        public Parser(Func<StreamReader, PResult<TNode>> func)
-        {
-            if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
-            Func = func;
-        }
-        
-        public Parser(string type, Func<StreamReader, PResult<TNode>> func) : this(func)
-        {
-            Type = type;
-        }
-        public Parser(string type, dynamic specificValue) : this(type)
-        {
-            SpecificValue = specificValue;
-        }
-        public Parser(string type)
-        {
-            Type = type;
-        }
-        public Parser(string type, dynamic specificValue, Func<StreamReader, PResult<TNode>> func) : this(type, func)
-        {
-            SpecificValue = specificValue;
-        }
-        
-
-        /// <summary>
-        /// Parse text from stream.
-        /// </summary>
-        /// <param name="sourceStream">Source input stream</param>
-        /// <param name="encoding">Stream encoding</param>
-        /// <returns></returns>
-        public new PResult<TNode> Run(Stream sourceStream, Encoding encoding)
-        {
-            Data.SharedData.LineColumn.Reset();
-            return Func(new StreamReader(sourceStream, encoding));
-        }
-        /// <summary>
-        /// Parse unicode text from stream.
-        /// </summary>
-        /// <param name="sourceStream">Source input stream</param>
-        /// <returns></returns>
-        public new PResult<TNode> Run(Stream sourceStream) => Run(sourceStream, Encoding.UTF8);
-        /// <summary>
-        /// Parse text.
-        /// </summary>
-        /// <param name="input"></param>
-        /// <param name="encoding">Text encoding</param>
-        /// <returns></returns>
-        public new PResult<TNode> Run(string input, Encoding encoding) => Run(new MemoryStream(encoding.GetBytes(input ?? "")), encoding);
-        /// <summary>
-        /// Parse unicode text.
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        public new PResult<TNode> Run(string input) => Run(input, Encoding.UTF8);
+        public Parser(Func<StreamReader, PResult<TNode>> func) : base(func) { }
+        public Parser(string type, Func<StreamReader, PResult<TNode>> func) : base(type, func) {}
+        public Parser(string type, dynamic specificValue, Func<StreamReader, PResult<TNode>> func) : base(type, func) { SpecificValue = specificValue; }
+        public Parser(string type, dynamic specificValue) : base(type) { SpecificValue = specificValue; }
+        public Parser(string type) : base(type) { }
 
 
         /// <summary>
@@ -376,13 +332,13 @@ namespace APCSharp.Parser
             ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character", m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(parser);
+                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (c == m)
                 {
                     Debug.Print("Parsed char '" + m + "'");
                     ProcessChar(c);
-                    return PResult<TNode>.Succeeded(new Node<TNode>(type, (char)s.Read()), s);
+                    return PResult<TNode>.Succeeded(new Node<TNode>(type, ((char)s.Read()).ToString()), s);
                 }
                 return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
             };
@@ -400,14 +356,14 @@ namespace APCSharp.Parser
             ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character in range " + n + " to " + m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(parser);
+                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
 
                 if (c >= n && c <= m)
                 {
                     Debug.Print("Parsed char '" + c + "'");
                     ProcessChar(c);
-                    return PResult<TNode>.Succeeded(new Node<TNode>(charType, (char)s.Read()), s);
+                    return PResult<TNode>.Succeeded(new Node<TNode>(charType, ((char)s.Read()).ToString()), s);
                 }
                 return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
             };
@@ -420,12 +376,6 @@ namespace APCSharp.Parser
             parser.Type = type;
             parser.SpecificValue = specificValue;
             return parser;
-        }
-
-        public Parser ToParser()
-        {
-            if (Func.GetType() == typeof(Func<string, PResult<NodeType>>)) return new Parser(Type, SpecificValue, Func as Func<string, PResult>);
-            throw new ArgumentException("Cannot cast Parser<" + typeof(TNode).Name + "> with " + Func.GetType() + " to Parser! Func must be of type Func<string, PResult>");
         }
     }
 }
