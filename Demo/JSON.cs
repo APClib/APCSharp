@@ -119,7 +119,7 @@ namespace Demo
                     JSONObject.lazyObjectParser,
                     JSONArray.arrayParser*/
                 )
-            ).MapChildren((n1, n2) => Node.List(n1, n2), NodeType.Pair).InfoBinder("Key-Value", "Key value pair");
+            ).MapChildren((n1, n2) => Node.List(n1, n2), NodeType.Tuple).InfoBinder("Key-Value", "Key value pair");
 
         internal static ParserBuilder ObjectParser =
             Parser.Char('{')
