@@ -138,7 +138,7 @@ namespace Demo
         public static JSONObject Parse(string json)
         {
             JSONObject result = new JSONObject();
-
+            /*
             PResult pr = ObjectParser.Run(json);
             if (pr.Success) Console.WriteLine(pr);
             else Console.WriteLine(pr.ErrorMessage);
@@ -148,9 +148,9 @@ namespace Demo
             for (int i = 0; i < pr.AST.Children.Count; i++)
             {
                 Node n = (Node)pr.AST.Children[i];
-                result[n.Value] = n.Children;
+                // result[n.Value] = n.Children;
             }
-
+            */
             return result;
         }
     }
