@@ -11,8 +11,9 @@ namespace APCSharp.Util
         /// <summary>
         /// Convert input character or string to Human Readable Text.
         /// </summary>
-        /// <param name="got">input</param>
+        /// <param name="s">input</param>
         /// <returns>readable input</returns>
+        // ReSharper disable once InconsistentNaming
         internal static string ValueToHRT(this string s) => s.ReplaceAll('\n', "\\n").ReplaceAll('\r', "\\r").ReplaceAll('\t', "\\t");
 
         internal static string ArrayToString<T>(this T[] a)
@@ -21,6 +22,13 @@ namespace APCSharp.Util
             if (a.Length == 0) return r + "]";
             foreach (T e in a) r += e + ", ";
             return r.Remove(r.Length - 2) + "]";
+        }
+
+        internal static TDest[] ArrayCast<TDest, TSource>(this TSource[] source) where TDest : TSource
+        {
+            TDest[] dest = new TDest[source.Length];
+            for (int i = 0; i < source.Length; i++) dest[i] = (TDest)source[i];
+            return dest;
         }
     }
 }
