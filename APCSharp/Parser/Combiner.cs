@@ -106,26 +106,28 @@ namespace APCSharp.Parser
     /// AST Transformation on generic nodes or lists of generic nodes.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
-    public class Combiner<TNode> : Combiner where TNode : struct, IConvertible
+    public class Combiner<TNode, TNodeType, TNodeData> : Combiner where TNode : ANode<TNode, TNodeType, TNodeData>
+        where TNodeType : struct
+        where TNodeData : struct
     {
         /// <summary>
         /// Node combiner Function
         /// </summary>
-        internal new Func<Node<TNode>, Node<TNode>?, Node<TNode>> Func { get; set; }
+        internal new Func<TNode, TNode?, TNode> Func { get; set; }
 
         /// <summary>
         /// Create a new combiner.
         /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(Func<Node<TNode>, Node<TNode>?, Node<TNode>> func) : this(string.Empty, func) {}
+        public Combiner(Func<TNode, TNode?, TNode> func) : this(string.Empty, func) {}
         /// <summary>
         /// Create a new combiner.
         /// The function must handle all cases of nodes. With values or with child nodes, neither or both.
         /// </summary>
         /// <param name="name">Name</param>
         /// <param name="func">Node combiner Function</param>
-        public Combiner(string name, Func<Node<TNode>, Node<TNode>?, Node<TNode>> func)
+        public Combiner(string name, Func<TNode, TNode?, TNode> func)
         {
             Func = func;
             Name = name;
@@ -136,7 +138,7 @@ namespace APCSharp.Parser
         /// <param name="n1">First Node</param>
         /// <param name="n2">Second Node</param>
         /// <returns>Node composed of two other Nodes</returns>
-        public Node<TNode> Combine(Node<TNode> n1, Node<TNode>? n2) => Func(n1, n2);
+        public TNode Combine(TNode n1, TNode? n2) => Func(n1, n2);
 
     }
 }

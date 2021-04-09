@@ -5,6 +5,57 @@ using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
+    public abstract class ANode<TNode, TNodeType, TNodeData> where TNode : ANode<TNode, TNodeType, TNodeData>
+        where TNodeType : struct
+        where TNodeData : struct
+    {
+        /// <summary>
+        /// Child nodes of current Node.
+        /// </summary>
+        public List<TNode> Children { get; set; }
+        /// <summary>
+        /// Node type.
+        /// </summary>
+        public TNodeType Type { get; internal set; }
+        /// <summary>
+        /// Describes what data the node contains.
+        /// </summary>
+        public TNodeData Data { get; internal set; }
+        /// <summary>
+        /// Arbitrary Node value.
+        /// </summary>
+        public string Value { get; internal set; }
+
+        /// <summary>
+        /// String formatted root Node representation.
+        /// </summary>
+        /// <returns>String formatted root Node representation.</returns>
+        public virtual string ToString(string indent)
+        {
+            string result = indent + $"{GetType().Name} {{ Type: {Type}";
+            if (!string.IsNullOrEmpty(Value)) result += $", Value: \"{Value.ValueToHRT()}\"";
+            if (Children.Count > 0)
+            {
+                result += ", Children:\n";
+                foreach (var t in Children)
+                    result += t.ToString(indent + Config.Indentation) + '\n';
+
+                result += indent;
+            }
+
+            return result + "}";
+        }
+        /// <summary>
+        /// String formatted root Node representation.
+        /// </summary>
+        /// <returns>String formatted root Node representation.</returns>
+        public override string ToString() => ToString("");
+    }
+    
+
+
+
+
     /// <summary>
     /// Default NodeType, should be sufficient for most parsers.
     /// </summary>
@@ -94,56 +145,11 @@ namespace APCSharp.Parser
         ValueAndChildren
     }
 
-    public abstract class ANode<TNode> where TNode : ANode<TNode>
-    {
-        /// <summary>
-        /// Child nodes of current Node.
-        /// </summary>
-        public List<TNode> Children { get; set; }
-        /// <summary>
-        /// Node type.
-        /// </summary>
-        public NodeType Type { get; internal set; }
-        /// <summary>
-        /// Describes what data the node contains.
-        /// </summary>
-        public NodeData Data { get; internal set; }
-        /// <summary>
-        /// Arbitrary Node value.
-        /// </summary>
-        public string Value { get; internal set; }
-
-        /// <summary>
-        /// String formatted root Node representation.
-        /// </summary>
-        /// <returns>String formatted root Node representation.</returns>
-        public string ToString(string indent)
-        {
-            if (Type == NodeType.Corrupted) return indent + "{GetType().Name} { Type: Corrupted }";
-            string result = indent + $"{GetType().Name} {{ Type: {Type}"; 
-
-            if (!string.IsNullOrEmpty(Value)) result += $", Value: \"{Value.ValueToHRT()}\"";
-            if (Children.Count > 0)
-            {
-                result += ", Children:\n";
-                for (int i = 0; i < Children.Count; i++) result += Children[i].ToString(indent + Config.Indentation) + '\n';
-                result += indent;
-            }
-
-            return result + "}";
-        }
-        /// <summary>
-        /// String formatted root Node representation.
-        /// </summary>
-        /// <returns>String formatted root Node representation.</returns>
-        public override string ToString() => ToString("");
-    }
-
 
     /// <summary>
     /// Default AST Node.
     /// </summary>
-    public class Node : ANode<Node>
+    public class Node : ANode<Node, NodeType, NodeData>
     {
         /// <summary>
         /// List Node.
@@ -212,6 +218,26 @@ namespace APCSharp.Parser
         }
 
         protected Node() : this(NodeType.Corrupted) { }
+        
+        /// <summary>
+        /// String formatted root Node representation.
+        /// </summary>
+        /// <returns>String formatted root Node representation.</returns>
+        public override string ToString(string indent)
+        {
+            if (Type == NodeType.Corrupted) return indent + "{GetType().Name} { Type: Corrupted }";
+            string result = indent + $"{GetType().Name} {{ Type: {Type}"; 
+
+            if (!string.IsNullOrEmpty(Value)) result += $", Value: \"{Value.ValueToHRT()}\"";
+            if (Children.Count > 0)
+            {
+                result += ", Children:\n";
+                for (int i = 0; i < Children.Count; i++) result += Children[i].ToString(indent + Config.Indentation) + '\n';
+                result += indent;
+            }
+
+            return result + "}";
+        }
     }
 
 
@@ -227,7 +253,10 @@ namespace APCSharp.Parser
     /// AST Node with generic node type.
     /// </summary>
     /// <typeparam name="TNode">Enum describing nodes</typeparam>
-    public class Node<TNode> : ANode<Node<TNode>> where TNode : struct, IConvertible
+    public class Node<TNode, TNodeType, TNodeData> : ANode<Node<TNode, TNodeType, TNodeData>, TNodeType, TNodeData>
+        where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+            where TNodeType : struct
+            where TNodeData : struct
     {
         /// <summary>
         /// Generic node type.
@@ -236,7 +265,7 @@ namespace APCSharp.Parser
         /// <summary>
         /// Child nodes of current Node.
         /// </summary>
-        public new List<Node<TNode>> Children { get; set; }
+        public new List<TNode> Children { get; set; }
 
         /// <summary>
         /// Create a new Node.
@@ -244,25 +273,25 @@ namespace APCSharp.Parser
         /// <param name="type">Type of Node</param>
         /// <param name="value">Value to hold</param>
         /// <param name="children">Any child nodes</param>
-        public Node(TNode type, string value, params Node<TNode>[] children)
+        public Node(TNode type, string value, params TNode[] children)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
 
             Type = type;
             Value = value;
-            Children = new List<Node<TNode>>(children);
+            Children = new List<TNode>(children);
         }
         /// <summary>
         /// Create a new Node but leave value control to subclasses.
         /// </summary>
         /// <param name="type">Type of Node</param>
         /// <param name="children">Any child nodes</param>
-        internal Node(TNode type, params Node<TNode>[] children)
+        internal Node(TNode type, params TNode[] children)
         {
             if (!typeof(TNode).IsEnum) throw new ArgumentException("TNode must be an enumerated type");
 
             Type = type;
-            Children = new List<Node<TNode>>(children);
+            Children = new List<TNode>(children);
         }
         /// <summary>
         /// Create a new Node without child nodes and leave value control to subclasses.
@@ -273,7 +302,7 @@ namespace APCSharp.Parser
             if (!typeof(TNode).IsEnum) throw new ArgumentException("T must be an enumerated type");
 
             Type = type;
-            Children = new List<Node<TNode>>();
+            Children = new List<TNode>();
         }
         /// <summary>
         /// Create a new Node without child nodes.
@@ -286,7 +315,7 @@ namespace APCSharp.Parser
 
             Type = type;
             Value = value;
-            Children = new List<Node<TNode>>();
+            Children = new List<TNode>();
         }
     }
 }
