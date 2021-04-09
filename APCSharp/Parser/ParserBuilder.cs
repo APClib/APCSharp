@@ -6,10 +6,19 @@ using APCSharp.Info;
 
 namespace APCSharp.Parser
 {
+    public interface IParserBuilder<TParserBuilder, in TCombiner, in TNode>
+        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode>
+        where TCombiner : Combiner
+        where TNode : struct, IConvertible
+    {
+        string GetMatchString();
+    }
+
+
     /// <summary>
-    /// Chainable methods to build complex parser logic
+    /// Chainable methods to build complex parser logic.
     /// </summary>
-    public class ParserBuilder : Parser
+    public class ParserBuilder : Parser, IParserBuilder<ParserBuilder, Combiner, NodeType>
     {
         public ParserBuilder(Func<StreamReader, PResult> func) : base(func) { }
 
@@ -22,8 +31,8 @@ namespace APCSharp.Parser
 
         public ParserBuilder InfoBinder(string type) => InfoBinder(type, null, this);
         public ParserBuilder InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
-        
 
+        
         /// <summary>
         /// Requires a parser match to be followed by another parser match.
         /// </summary>
@@ -68,7 +77,6 @@ namespace APCSharp.Parser
         public ParserBuilder ZeroOrMore()
         {
             return new ParserBuilder(s => {
-                Debug.Print("Looking for zero or more " + GetMatchString());
                 PResult p = Func(s);
                 Node root = Node.List();
                 while (p.Success)
@@ -86,6 +94,8 @@ namespace APCSharp.Parser
         /// <returns></returns>
         public ParserBuilder OneOrMore()
         {
+            return FollowedBy(ZeroOrMore()); // One match of the current parser followed by zero or more is the same as one or more.
+            /*
             return new ParserBuilder(s => {
                 Debug.Print("Looking for one or more " + GetMatchString());
                 PResult p = Func(s);
@@ -100,6 +110,7 @@ namespace APCSharp.Parser
                 }
                 return PResult.Succeeded(root, s);
             });
+            */
         }
         
         /// <summary>
@@ -123,7 +134,6 @@ namespace APCSharp.Parser
             });
         }
         
-
         /// <summary>
         /// Preforms a combiner function on every child node of a parser result and labeling the result with a named type.
         /// </summary>
@@ -140,11 +150,7 @@ namespace APCSharp.Parser
                 // Map over all child nodes
                 Node n = p.AST.Children[0];
                 if (p.AST.Children.Count == 1) n = combiner.Combine(n, null); // Use single value
-                else for (int i = 1; i < p.AST.Children.Count; i++)
-                {
-                    if (combiner.Type != CombinerType.OnChildren && (n.Type == NodeType.List || p.AST.Children[i].Type == NodeType.List)) throw new ArgumentException($"Cannot perform mapping of lists with the given combiner '{combiner.Func.Method.Name}'. Please use a combiner that works over elements.");
-                    n = combiner.Combine(n, p.AST.Children[i]);
-                }
+                else for (int i = 1; i < p.AST.Children.Count; i++) n = combiner.Combine(n, p.AST.Children[i]);
                 n.Type = namedType;
                 return PResult.Succeeded(n, s);
             });
@@ -163,21 +169,21 @@ namespace APCSharp.Parser
         /// <param name="func">Map function</param>
         /// <param name="namedType">Result label</param>
         /// <returns></returns>
-        public ParserBuilder Map(CombinerType type, Func<Node, Node?, Node> func, NodeType namedType) => Map(new Combiner(type, func), namedType);
+        public ParserBuilder Map(Func<Node, Node?, Node> func, NodeType namedType) => Map(new Combiner(func), namedType);
         /// <summary>
         /// Map over the previous parsers AST with a function expecting certain node fields to be set, and assume the result is a string.
         /// </summary>
         /// <param name="type">Node expectations</param>
         /// <param name="func">Map function</param>
         /// <returns></returns>
-        public ParserBuilder Map(CombinerType type, Func<Node, Node?, Node> func) => Map(type, func, NodeType.String);
+        public ParserBuilder Map(Func<Node, Node?, Node> func) => Map(func, NodeType.String);
         /// <summary>
         /// Map over the previous parsers AST with a function expecting nodes to have child nodes, and label the result with a named type.
         /// </summary>
         /// <param name="func">Map function</param>
         /// <param name="namedType">Result label</param>
         /// <returns></returns>
-        public ParserBuilder MapChildren(Func<Node, Node?, Node> func, NodeType namedType) => Map(CombinerType.OnChildren, func, namedType);
+        public ParserBuilder MapChildren(Func<Node, Node?, Node> func, NodeType namedType) => Map(func, namedType);
         /// <summary>
         /// Map over the previous parsers AST with a function expecting nodes to have child nodes, and assume the result is a string.
         /// </summary>
@@ -190,7 +196,7 @@ namespace APCSharp.Parser
         /// <param name="func">Map function</param>
         /// <param name="namedType">Result label</param>
         /// <returns></returns>
-        public ParserBuilder MapValues(Func<Node, Node?, Node> func, NodeType namedType) => Map(CombinerType.OnValue, func, namedType);
+        public ParserBuilder MapValues(Func<Node, Node?, Node> func, NodeType namedType) => Map(func, namedType);
         /// <summary>
         /// Map over the previous parsers AST with a function expecting nodes to have a value, and assume the result is a string.
         /// </summary>
@@ -207,6 +213,8 @@ namespace APCSharp.Parser
         /// </summary>
         /// <returns></returns>
         public ParserBuilder ListToString() => ListToString(NodeType.String);
+
+
 
         private ParserBuilder MaybeMatch()
         {
@@ -227,6 +235,7 @@ namespace APCSharp.Parser
                 return p;
             });
         }
+
         /// <summary>
         /// Adds a parsers match if any. Use for optional matches.
         /// Automatically removes empty maybe matches.
@@ -255,10 +264,10 @@ namespace APCSharp.Parser
 
     
     /// <summary>
-    /// Chainable methods to build complex generic parser logic
+    /// Chainable methods to build complex generic parser logic.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
-    public class ParserBuilder<TNode> : Parser<TNode> where TNode : struct, IConvertible
+    public class ParserBuilder<TNode> : Parser<TNode>, IParserBuilder<ParserBuilder<TNode>, Combiner<TNode>, TNode> where TNode : struct, IConvertible
     {
         public ParserBuilder(Func<StreamReader, PResult<TNode>> func) : base(func) { }
         public ParserBuilder(string type, Func<StreamReader, PResult<TNode>> func) : base(type, func) { }
@@ -272,6 +281,29 @@ namespace APCSharp.Parser
         }
         public ParserBuilder(string type) : base(type) { }
 
+        public ParserBuilder<TNode> InfoBinder(string type) => InfoBinder(type, null, this);
+        public ParserBuilder<TNode> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
+
+        public ParserBuilder<TNode> FollowedBy(ParserBuilder<TNode> parser)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ParserBuilder<TNode> Or(ParserBuilder<TNode> parser)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ParserBuilder<TNode> ZeroOrMore()
+        {
+            throw new NotImplementedException();
+        }
+
+        public ParserBuilder<TNode> OneOrMore()
+        {
+            throw new NotImplementedException();
+        }
+        
         /// <summary>
         /// Expects the parser to be repeated n, number of times.
         /// </summary>
@@ -292,9 +324,31 @@ namespace APCSharp.Parser
                 return p;
             });
         }
+        
+        /// <summary>
+        /// Preforms a combiner function on every child node of a parser result and labeling the result with a named type.
+        /// </summary>
+        /// <param name="combiner">Map combiner</param>
+        /// <param name="namedType">Result type</param>
+        /// <returns></returns>
+        public ParserBuilder<TNode> Map(Combiner<TNode> combiner, TNode namedType)
+        {
+            throw new NotImplementedException();
+        }
 
-        public ParserBuilder<TNode> InfoBinder(string type) => InfoBinder(type, null, this);
-        public ParserBuilder<TNode> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
+        public ParserBuilder<TNode> Maybe()
+        {
+            throw new NotImplementedException();
+        }
 
+        public ParserBuilder<TNode> AnyWhitespaces()
+        {
+            throw new NotImplementedException();
+        }
+
+        public ParserBuilder<TNode> IgnoreAnyWhitespaces()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
