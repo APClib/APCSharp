@@ -5,15 +5,20 @@ using APCSharp.Info;
 namespace APCSharp.Parser
 {
     /// <summary>
-    /// Parser result
+    /// Abstract parse result.
     /// </summary>
-    public class PResult
+    // ReSharper disable once InconsistentNaming
+    public class PResultBase<TPResult, TNode, TNodeType, TNodeData>
+        where TNode : ANode<TNode, TNodeType, TNodeData>
+            where TNodeType : struct
+            where TNodeData : struct
+        where TPResult : PResultBase<TPResult, TNode, TNodeType, TNodeData>, new()
     {
         /// <summary>
         /// Root of parsed AST
         /// </summary>
         // ReSharper disable once InconsistentNaming
-        public Node AST { get; internal set; }
+        public TNode AST { get; internal set; }
 
         public StreamReader Stream { get; internal set; }
         /// <summary>
@@ -28,32 +33,24 @@ namespace APCSharp.Parser
         /// If the parse was not successful, this field holds the input sequence that failed to match
         /// </summary>
         public string ErrorSequence { get; internal set; }
-        /// <summary>
-        /// Constructor for a successful parse result
-        /// </summary>
-        /// <param name="node">Root AST</param>
-        /// <param name="stream">Stream reader</param>
-        /// <returns>Successful parse result</returns>
-        public static PResult Succeeded(Node node, StreamReader stream) => new PResult
+        public static TPResult Succeeded(TNode node, StreamReader stream) => new TPResult
         {
             Success = true,
             AST = node,
             Stream = stream
         };
-
         /// <summary>
         /// Constructor for a failed parse result
         /// </summary>
         /// <param name="errorMsg">A descriptive error message</param>
-        /// <param name="errorSequence">The sequence that failed to be parsed</param>
+        /// <param name="errorSequence">The character sequence that failed to parse</param>
         /// <param name="stream">Stream reader</param>
-        /// <returns>Failed parse result</returns>
-        public static PResult Failed(string errorMsg, string errorSequence, StreamReader stream) => new PResult
+        /// <returns></returns>
+        public static TPResult Failed(string errorMsg, string errorSequence, StreamReader stream) => new TPResult
         {
             Success = false,
             ErrorMessage = errorMsg,
-            ErrorSequence = errorSequence,
-            AST = Node.Corrupted,
+            AST = default(TNode),
             Stream = stream
         };
         /// <summary>
@@ -63,63 +60,35 @@ namespace APCSharp.Parser
         /// <param name="errorChar">The character that failed to parse</param>
         /// <param name="stream">Stream reader</param>
         /// <returns></returns>
-        public static PResult Failed(string errorMsg, char errorChar, StreamReader stream) =>
-            Failed(errorMsg, errorChar.ToString(), stream);
+        public static TPResult Failed(string errorMsg, char errorChar, StreamReader stream) => Failed(errorMsg, errorChar.ToString(), stream);
+        public static TPResult EndOfInput(ErrorLogger<ParserBuilder, Combiner, PResult, Node, NodeType, NodeData> error, params IParserBuilder<ParserBuilder, Combiner, Node, NodeType, NodeData>[] parsers) => Failed(error.Unexpected("end of input", parsers), '\0', StreamReader.Null);
+        public override string ToString()
+        {
+            return Success ? $"{GetType().Name} {{ Status: Succeeded, AST:\n" + AST.ToString(Util.Config.Indentation) + $"\n}}" :
+                $"{GetType().Name} {{ Status: Failed, Message: \"{ErrorMessage}\" }}";
+        }
+    }
+
+    /// <summary>
+    /// Parse result.
+    /// </summary>
+    public class PResult : PResultBase<PResult, Node, NodeType, NodeData>
+    {
         /// <summary>
         /// An empty parse result.
         /// Often used within the mechanism of a parser and should not be returned to the user.
         /// </summary>
         /// <returns>Empty parse result</returns>
         public static PResult Empty(StreamReader stream) => Succeeded(Node.Empty, StreamReader.Null);
-
-        internal static PResult EndOfInput(params APCSharp.Parser.Parser[] parsers) =>
-            Failed(Error.Unexpected("end of input", parsers), '\0', StreamReader.Null);
-
-
-
-        protected PResult(){}
-
-        public override string ToString()
-        {
-            return Success ? $"PResult {{ Status: Succeeded, AST:\n" + AST.ToString(Util.Config.Indentation) + $"\n}}" :
-                             $"PResult {{ Status: Failed, Message: \"{ErrorMessage}\" }}";
-        }
     }
 
     /// <summary>
-    /// Generic parser result
+    /// Generic parser result.
     /// </summary>
     /// <typeparam name="TNode">Enum for node type</typeparam>
-    public class PResult<TNode> : PResult where TNode : struct, IConvertible
-    {
-        /// <summary>
-        /// Root of parsed AST
-        /// </summary>
-        // ReSharper disable once InconsistentNaming
-        public new Node<TNode> AST { get; internal set; }
-        protected PResult(){}
-        public static PResult<TNode> Succeeded(Node<TNode> node, StreamReader stream) => new PResult<TNode>
-        {
-            Success = true,
-            AST = node,
-            Stream = stream
-        };
-        public new static PResult<TNode> Failed(string errorMsg, string errorSequence, StreamReader stream) => new PResult<TNode>
-        {
-            Success = false,
-            ErrorMessage = errorMsg,
-            AST = default(Node<TNode>),
-            Stream = stream
-        };
-        
-        /// <summary>
-        /// Constructor for a failed parse result
-        /// </summary>
-        /// <param name="errorMsg">A descriptive error message</param>
-        /// <param name="errorChar">The character that failed to parse</param>
-        /// <param name="stream">Stream reader</param>
-        /// <returns></returns>
-        public new static PResult<TNode> Failed(string errorMsg, char errorChar, StreamReader stream) => Failed(errorMsg, errorChar.ToString(), stream);
-        internal new static PResult<TNode> EndOfInput(params Parser[] parsers) => Failed(Error.Unexpected("end of input", parsers), '\0', StreamReader.Null);
-    }
+    public class PResult<TNode, TNodeType, TNodeData> : PResultBase<PResult<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
+        where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+            where TNodeType : struct
+            where TNodeData : struct
+    { }
 }
