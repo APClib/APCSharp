@@ -1,15 +1,16 @@
 ﻿#nullable enable
 using System;
 using System.IO;
-using System.Runtime.CompilerServices;
 using APCSharp.Info;
 
 namespace APCSharp.Parser
 {
-    public interface IParserBuilder<TParserBuilder, in TCombiner, in TNode>
-        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode>
+    public interface IParserBuilder<TParserBuilder, in TCombiner, in TNode, TNodeType, TNodeData>
+        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode, TNodeType, TNodeData>
         where TCombiner : Combiner
-        where TNode : struct, IConvertible
+        where TNode : ANode<TNode, TNodeType, TNodeData>
+            where TNodeType : struct
+            where TNodeData : struct
     {
         string GetMatchString();
     }
@@ -18,7 +19,7 @@ namespace APCSharp.Parser
     /// <summary>
     /// Chainable methods to build complex parser logic.
     /// </summary>
-    public class ParserBuilder : Parser, IParserBuilder<ParserBuilder, Combiner, NodeType>
+    public class ParserBuilder : Parser, IParserBuilder<ParserBuilder, Combiner, Node, NodeType, NodeData>
     {
         public ParserBuilder(Func<StreamReader, PResult> func) : base(func) { }
 
@@ -267,11 +268,14 @@ namespace APCSharp.Parser
     /// Chainable methods to build complex generic parser logic.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
-    public class ParserBuilder<TNode> : Parser<TNode>, IParserBuilder<ParserBuilder<TNode>, Combiner<TNode>, TNode> where TNode : struct, IConvertible
+    public class ParserBuilder<TNode, TNodeType, TNodeData> : Parser<TNode, TNodeType, TNodeData>, IParserBuilder<ParserBuilder<TNode, TNodeType, TNodeData>, Combiner<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
+        where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+            where TNodeType : struct
+            where TNodeData : struct
     {
-        public ParserBuilder(Func<StreamReader, PResult<TNode>> func) : base(func) { }
-        public ParserBuilder(string type, Func<StreamReader, PResult<TNode>> func) : base(type, func) { }
-        public ParserBuilder(string type, dynamic specificValue, Func<StreamReader, PResult<TNode>> func) : this(type, func)
+        public ParserBuilder(Func<StreamReader, PResult<TNode, TNodeType, TNodeData>>? func) : base(func) { }
+        public ParserBuilder(string type, Func<StreamReader, PResult<TNode, TNodeType, TNodeData>> func) : base(type, func) { }
+        public ParserBuilder(string type, dynamic specificValue, Func<StreamReader, PResult<TNode, TNodeType, TNodeData>> func) : this(type, func)
         {
             SpecificValue = specificValue;
         }
@@ -281,25 +285,25 @@ namespace APCSharp.Parser
         }
         public ParserBuilder(string type) : base(type) { }
 
-        public ParserBuilder<TNode> InfoBinder(string type) => InfoBinder(type, null, this);
-        public ParserBuilder<TNode> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
+        public ParserBuilder<TNode, TNodeType, TNodeData> InfoBinder(string type) => InfoBinder(type, null, this);
+        public ParserBuilder<TNode, TNodeType, TNodeData> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
 
-        public ParserBuilder<TNode> FollowedBy(ParserBuilder<TNode> parser)
+        public ParserBuilder<TNode, TNodeType, TNodeData> FollowedBy(ParserBuilder<TNode, TNodeType, TNodeData> parser)
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> Or(ParserBuilder<TNode> parser)
+        public ParserBuilder<TNode, TNodeType, TNodeData> Or(ParserBuilder<TNode, TNodeType, TNodeData> parser)
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> ZeroOrMore()
+        public ParserBuilder<TNode, TNodeType, TNodeData> ZeroOrMore()
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> OneOrMore()
+        public ParserBuilder<TNode, TNodeType, TNodeData> OneOrMore()
         {
             throw new NotImplementedException();
         }
@@ -309,12 +313,12 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="n">Number of times</param>
         /// <returns></returns>
-        public ParserBuilder<TNode> Times(int n)
+        public ParserBuilder<TNode, TNodeType, TNodeData> Times(int n)
         {
-            return new ParserBuilder<TNode>(s => {
+            return new ParserBuilder<TNode, TNodeType, TNodeData>(s => {
                 Debug.Print("Repeating the parsing process " + n + " times.");
                 Debug.Print("Iteration: 1");
-                PResult<TNode> p = Func(s);
+                PResult<TNode, TNodeType, TNodeData> p = Func(s);
                 for (int i = 1; i <= n; i++)
                 {
                     Debug.Print("Iteration: " + (i + 1));
@@ -331,22 +335,22 @@ namespace APCSharp.Parser
         /// <param name="combiner">Map combiner</param>
         /// <param name="namedType">Result type</param>
         /// <returns></returns>
-        public ParserBuilder<TNode> Map(Combiner<TNode> combiner, TNode namedType)
+        public ParserBuilder<TNode, TNodeType, TNodeData> Map(Combiner<TNode, TNodeType, TNodeData> combiner, TNode namedType)
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> Maybe()
+        public ParserBuilder<TNode, TNodeType, TNodeData> Maybe()
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> AnyWhitespaces()
+        public ParserBuilder<TNode, TNodeType, TNodeData> AnyWhitespaces()
         {
             throw new NotImplementedException();
         }
 
-        public ParserBuilder<TNode> IgnoreAnyWhitespaces()
+        public ParserBuilder<TNode, TNodeType, TNodeData> IgnoreAnyWhitespaces()
         {
             throw new NotImplementedException();
         }
