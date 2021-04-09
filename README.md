@@ -64,19 +64,7 @@ PResult { Status: Succeeded, Remaining: "", AST:
 }
 ```
 
-
-
-## Specification
-
-| Description  | Value         |
-| ------------ | ------------- |
-| Framework    | .NET Core 3.1 |
-| Package Size | 18 kB         |
-| Semi-colons  | < 200         |
-
-
-
-## 👩🏽‍🔬 Want to help?
+## 👩🏽‍🔬 Want to contribute?
 
 All help is very much appreciated! You can fork the repo right now and start building your own version right away, and if you happen to create something interesting and useful, don't hesitate to file a pull request!
 
