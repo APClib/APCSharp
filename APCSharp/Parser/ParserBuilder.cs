@@ -2,25 +2,38 @@
 using System;
 using System.IO;
 using APCSharp.Info;
+using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
-    public interface IParserBuilder<TParserBuilder, in TCombiner, in TNode, TNodeType, TNodeData>
-        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode, TNodeType, TNodeData>
-        where TCombiner : Combiner
-        where TNode : ANode<TNode, TNodeType, TNodeData>
-            where TNodeType : struct
-            where TNodeData : struct
+    public class ParserBuilderBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData> : AParser<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+    where TParserBuilder : ParserBuilderBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+    where TCombiner : ACombiner<TNode, TNodeType, TNodeData>
+    where TPResult : PResultBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>, new()
+    where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+        where TNodeType : struct
+        where TNodeData : struct
     {
-        string GetMatchString();
+        public ParserBuilderBase(Func<StreamReader, TPResult> func) : base(func) { }
+
+        public ParserBuilderBase(string type, Func<StreamReader, TPResult> func) : base(type, func) { }
+        public ParserBuilderBase(string type, dynamic specificValue, Func<StreamReader, TPResult> func) : this(type, func) { SpecificValue = specificValue; }
+        public ParserBuilderBase(string type, dynamic specificValue) : base(type) { SpecificValue = specificValue; }
+        public ParserBuilderBase(string type) : base(type) { }
+
+        public new TPResult Run(string s) => base.Run(s);
+
+        public TParserBuilder InfoBinder(string type) => InfoBinder(type, null, (TParserBuilder)this);
+        public TParserBuilder InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, (TParserBuilder)this);
     }
 
 
     /// <summary>
     /// Chainable methods to build complex parser logic.
     /// </summary>
-    public class ParserBuilder : Parser, IParserBuilder<ParserBuilder, Combiner, Node, NodeType, NodeData>
+    public class ParserBuilder : ParserBuilderBase<ParserBuilder, Combiner, PResult, Node, NodeType, NodeData>, ICastable<Parser>
     {
+        public ParserBuilder(): base(string.Empty) {}
         public ParserBuilder(Func<StreamReader, PResult> func) : base(func) { }
 
         public ParserBuilder(string type, Func<StreamReader, PResult> func) : base(type, func) { }
@@ -29,9 +42,6 @@ namespace APCSharp.Parser
         public ParserBuilder(string type) : base(type) { }
 
         public new PResult Run(string s) => base.Run(s);
-
-        public ParserBuilder InfoBinder(string type) => InfoBinder(type, null, this);
-        public ParserBuilder InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
 
         
         /// <summary>
@@ -247,12 +257,24 @@ namespace APCSharp.Parser
         /// Match a any amount of whitespace
         /// </summary>
         /// <returns></returns>
-        public ParserBuilder AnyWhitespaces() => FollowedBy(WhiteSpaces).Maybe().InfoBinder("any whitespaces");
+        public ParserBuilder AnyWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe().InfoBinder("any whitespaces");
         /// <summary>
         /// Match and ignore any amount of whitespace
         /// </summary>
         /// <returns></returns>
         public ParserBuilder IgnoreAnyWhitespaces() => AnyWhitespaces().Map(Combiner.First, NodeType.List);
+
+        public Parser Cast()
+        {
+            return new Parser
+            {
+                Func = Func,
+                SpecificValue = SpecificValue,
+                Type = Type
+            };
+        }
+
+        public static implicit operator Parser(ParserBuilder p) => p.Cast();
     }
 
 
@@ -268,7 +290,7 @@ namespace APCSharp.Parser
     /// Chainable methods to build complex generic parser logic.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
-    public class ParserBuilder<TNode, TNodeType, TNodeData> : Parser<TNode, TNodeType, TNodeData>, IParserBuilder<ParserBuilder<TNode, TNodeType, TNodeData>, Combiner<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
+    public class ParserBuilder<TNode, TNodeType, TNodeData> : ParserBuilderBase<ParserBuilder<TNode, TNodeType, TNodeData>, Combiner<TNode, TNodeType, TNodeData>, PResult<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
         where TNode : ANode<TNode, TNodeType, TNodeData>, new()
             where TNodeType : struct
             where TNodeData : struct
@@ -284,9 +306,6 @@ namespace APCSharp.Parser
             SpecificValue = specificValue;
         }
         public ParserBuilder(string type) : base(type) { }
-
-        public ParserBuilder<TNode, TNodeType, TNodeData> InfoBinder(string type) => InfoBinder(type, null, this);
-        public ParserBuilder<TNode, TNodeType, TNodeData> InfoBinder(string type, string specificValue) => InfoBinder(type, specificValue, this);
 
         public ParserBuilder<TNode, TNodeType, TNodeData> FollowedBy(ParserBuilder<TNode, TNodeType, TNodeData> parser)
         {

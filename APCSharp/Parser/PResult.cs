@@ -8,11 +8,13 @@ namespace APCSharp.Parser
     /// Abstract parse result.
     /// </summary>
     // ReSharper disable once InconsistentNaming
-    public class PResultBase<TPResult, TNode, TNodeType, TNodeData>
-        where TNode : ANode<TNode, TNodeType, TNodeData>
+    public abstract class PResultBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+        where TParserBuilder : ParserBuilderBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+        where TCombiner : ACombiner<TNode, TNodeType, TNodeData>
+        where TNode : ANode<TNode, TNodeType, TNodeData>, new()
             where TNodeType : struct
             where TNodeData : struct
-        where TPResult : PResultBase<TPResult, TNode, TNodeType, TNodeData>, new()
+        where TPResult : PResultBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>, new()
     {
         /// <summary>
         /// Root of parsed AST
@@ -33,6 +35,11 @@ namespace APCSharp.Parser
         /// If the parse was not successful, this field holds the input sequence that failed to match
         /// </summary>
         public string ErrorSequence { get; internal set; }
+        /// <summary>
+        /// Constructor for a successful parse result
+        /// </summary>
+        /// <param name="node">Root AST</param>
+        /// <returns>Successful parse result</returns>
         public static TPResult Succeeded(TNode node, StreamReader stream) => new TPResult
         {
             Success = true,
@@ -50,6 +57,7 @@ namespace APCSharp.Parser
         {
             Success = false,
             ErrorMessage = errorMsg,
+            ErrorSequence = errorSequence,
             AST = default(TNode),
             Stream = stream
         };
@@ -61,7 +69,7 @@ namespace APCSharp.Parser
         /// <param name="stream">Stream reader</param>
         /// <returns></returns>
         public static TPResult Failed(string errorMsg, char errorChar, StreamReader stream) => Failed(errorMsg, errorChar.ToString(), stream);
-        public static TPResult EndOfInput(ErrorLogger<ParserBuilder, Combiner, PResult, Node, NodeType, NodeData> error, params IParserBuilder<ParserBuilder, Combiner, Node, NodeType, NodeData>[] parsers) => Failed(error.Unexpected("end of input", parsers), '\0', StreamReader.Null);
+        public static TPResult EndOfInput(ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData> error, params TParserBuilder[] parsers) => Failed(error.Unexpected("end of input", parsers), '\0', StreamReader.Null);
         public override string ToString()
         {
             return Success ? $"{GetType().Name} {{ Status: Succeeded, AST:\n" + AST.ToString(Util.Config.Indentation) + $"\n}}" :
@@ -72,7 +80,7 @@ namespace APCSharp.Parser
     /// <summary>
     /// Parse result.
     /// </summary>
-    public class PResult : PResultBase<PResult, Node, NodeType, NodeData>
+    public class PResult : PResultBase<ParserBuilder, Combiner, PResult, Node, NodeType, NodeData>
     {
         /// <summary>
         /// An empty parse result.
@@ -86,7 +94,9 @@ namespace APCSharp.Parser
     /// Generic parser result.
     /// </summary>
     /// <typeparam name="TNode">Enum for node type</typeparam>
-    public class PResult<TNode, TNodeType, TNodeData> : PResultBase<PResult<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
+    /// <typeparam name="TNodeType"></typeparam>
+    /// <typeparam name="TNodeData"></typeparam>
+    public class PResult<TNode, TNodeType, TNodeData> : PResultBase<ParserBuilder<TNode, TNodeType, TNodeData>, Combiner<TNode, TNodeType, TNodeData>, PResult<TNode, TNodeType, TNodeData>, TNode, TNodeType, TNodeData>
         where TNode : ANode<TNode, TNodeType, TNodeData>, new()
             where TNodeType : struct
             where TNodeData : struct
