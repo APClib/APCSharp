@@ -12,17 +12,19 @@ namespace APCSharp.Parser
     /// <summary>
     /// Shared abstract interface for parsers.
     /// </summary>
-    public abstract class AParser<TParserBuilder, TCombiner, TPResult, TNode>
-        where TParserBuilder : IParserBuilder<TParserBuilder, TCombiner, TNode>
-        where TCombiner : Combiner
-        where TPResult : PResult
-        where TNode : struct, IConvertible
+    public abstract class AParser<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+        where TParserBuilder : ParserBuilderBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>
+        where TCombiner : ACombiner<TNode, TNodeType, TNodeData>
+        where TPResult : PResultBase<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>, new()
+        where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+            where TNodeType : struct
+            where TNodeData : struct
     {
-        protected static readonly ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode> Error = new ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode>();
+        protected static readonly ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData> Error = new ErrorLogger<TParserBuilder, TCombiner, TPResult, TNode, TNodeType, TNodeData>();
         internal string Type { get; set; }
         internal dynamic SpecificValue { get; set; }
         internal Func<StreamReader, TPResult> Func;
-
+        protected AParser() {}
         protected AParser(Func<StreamReader, TPResult> func) { Func = func; }
         protected AParser(string type, Func<StreamReader, TPResult> func) : this(func) { Type = type; }
         protected AParser(string type) { Type = type; }
@@ -78,6 +80,14 @@ namespace APCSharp.Parser
             }
         }
 
+        public static TParserBuilder InfoBinder(string type, TParserBuilder parser) => InfoBinder(type, null, parser);
+        public static TParserBuilder InfoBinder(string type, string specificValue, TParserBuilder parser)
+        {
+            parser.Type = type;
+            parser.SpecificValue = specificValue;
+            return parser;
+        }
+
         #endregion
     }
 
@@ -91,8 +101,9 @@ namespace APCSharp.Parser
     /// <summary>
     /// Default text parser enough for most parsers.
     /// </summary>
-    public class Parser : AParser<ParserBuilder, Combiner, PResult, NodeType>
+    public class Parser : AParser<ParserBuilder, Combiner, PResult, Node, NodeType, NodeData>, ICastable<ParserBuilder>
     {
+        public Parser() { }
         public Parser(Func<StreamReader, PResult> func) : base(func) { }
         public Parser(string type, Func<StreamReader, PResult> func) : base(type, func) {}
         public Parser(string type, dynamic specificValue, Func<StreamReader, PResult> func) : base(type, func) { SpecificValue = specificValue; }
@@ -248,14 +259,6 @@ namespace APCSharp.Parser
             return parser;
         }
 
-        public static ParserBuilder InfoBinder(string type, ParserBuilder parser) => InfoBinder(type, null, parser);
-        public static ParserBuilder InfoBinder(string type, string specificValue, ParserBuilder parser)
-        {
-            parser.Type = type;
-            parser.SpecificValue = specificValue;
-            return parser;
-        }
-
 
         /// <summary>
         /// A letter from A-z. Does not support unicode.
@@ -300,82 +303,15 @@ namespace APCSharp.Parser
         public static ParserBuilder LineEndings = LineEnding.OneOrMore().Map(Combiner.String, NodeType.Newline).InfoBinder("line endings");
 
         #endregion
-    }
 
-
-
-
-
-
-
-    /// <summary>
-    /// Generic Text parser.
-    /// </summary>
-    /// <typeparam name="TNode">Node Enum Types</typeparam>
-    public class Parser<TNode> : AParser<ParserBuilder<TNode>, Combiner<TNode>, PResult<TNode>, TNode> where TNode : struct, IConvertible
-    {
-        public Parser(Func<StreamReader, PResult<TNode>> func) : base(func) { }
-        public Parser(string type, Func<StreamReader, PResult<TNode>> func) : base(type, func) {}
-        public Parser(string type, dynamic specificValue, Func<StreamReader, PResult<TNode>> func) : base(type, func) { SpecificValue = specificValue; }
-        public Parser(string type, dynamic specificValue) : base(type) { SpecificValue = specificValue; }
-        public Parser(string type) : base(type) { }
-
-
-        /// <summary>
-        /// Only match a specific character.
-        /// </summary>
-        /// <param name="m">Character to match</param>
-        /// <param name="type">The type of the matched character</param>
-        /// <returns>Single character parser</returns>
-        public static ParserBuilder<TNode> Char(char m, TNode type)
+        public ParserBuilder Cast()
         {
-            ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character", m);
-            parser.Func = s =>
+            return new ParserBuilder
             {
-                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(Error, parser);
-                char c = (char) s.Peek();
-                if (c == m)
-                {
-                    Debug.Print("Parsed char '" + m + "'");
-                    ProcessChar(c);
-                    return PResult<TNode>.Succeeded(new Node<TNode>(type, ((char)s.Read()).ToString()), s);
-                }
-                return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
+                Func = Func,
+                SpecificValue = SpecificValue,
+                Type = Type
             };
-            return parser;
-        }
-        /// <summary>
-        /// Accepts character if in range of n and m and set a custom named NodeType.
-        /// </summary>
-        /// <param name="n">Lower character bound</param>
-        /// <param name="m">Upper character bound></param>
-        /// <param name="charType">Named type of matched character</param>
-        /// <returns>Parser for any character between n and m</returns>
-        public static ParserBuilder<TNode> InRange(char n, char m, TNode charType)
-        {
-            ParserBuilder<TNode> parser = new ParserBuilder<TNode>("character in range " + n + " to " + m);
-            parser.Func = s =>
-            {
-                if (s.Peek() == -1) return PResult<TNode>.EndOfInput(Error, parser);
-                char c = (char) s.Peek();
-
-                if (c >= n && c <= m)
-                {
-                    Debug.Print("Parsed char '" + c + "'");
-                    ProcessChar(c);
-                    return PResult<TNode>.Succeeded(new Node<TNode>(charType, ((char)s.Read()).ToString()), s);
-                }
-                return PResult<TNode>.Failed(Error.Unexpected(c, parser), c, s);
-            };
-            return parser;
-        }
-
-        public static ParserBuilder<TNode> InfoBinder(string type, ParserBuilder<TNode> parser) => InfoBinder(type, null, parser);
-        public static ParserBuilder<TNode> InfoBinder(string type, string specificValue, ParserBuilder<TNode> parser)
-        {
-            parser.Type = type;
-            parser.SpecificValue = specificValue;
-            return parser;
         }
     }
 }
