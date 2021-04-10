@@ -5,7 +5,7 @@ using APCSharp.Util;
 
 namespace APCSharp.Parser
 {
-    public abstract class ANode<TNode, TNodeType, TNodeData> where TNode : ANode<TNode, TNodeType, TNodeData>
+    public abstract class ANode<TNode, TNodeType, TNodeData> where TNode : ANode<TNode, TNodeType, TNodeData>, new()
         where TNodeType : struct
         where TNodeData : struct
     {
@@ -151,6 +151,8 @@ namespace APCSharp.Parser
     /// </summary>
     public class Node : ANode<Node, NodeType, NodeData>
     {
+        public Node() : this(NodeType.Corrupted) { }
+
         /// <summary>
         /// List Node.
         /// </summary>
@@ -216,8 +218,6 @@ namespace APCSharp.Parser
             Value = String.Empty;
             Children = new List<Node>();
         }
-
-        protected Node() : this(NodeType.Corrupted) { }
         
         /// <summary>
         /// String formatted root Node representation.
@@ -258,6 +258,7 @@ namespace APCSharp.Parser
             where TNodeType : struct
             where TNodeData : struct
     {
+        public Node() {}
         /// <summary>
         /// Generic node type.
         /// </summary>
