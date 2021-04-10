@@ -6,16 +6,21 @@ using System.Text;
 
 namespace APCSharp.Parser
 {
-    /// <summary>
-    /// AST Transformation on nodes or lists of nodes.
-    /// </summary>
-    public class Combiner
+    public abstract class ACombiner<TNode, TNodeType, TNodeData> where TNode : ANode<TNode, TNodeType, TNodeData>, new()
+        where TNodeType : struct
+        where TNodeData : struct
     {
         public string Name { get; internal set; }
         /// <summary>
         /// Node combiner Function
         /// </summary>
-        internal Func<Node, Node?, Node> Func { get; set; }
+        internal Func<TNode, TNode?, TNode> Func { get; set; }
+    }
+    /// <summary>
+    /// AST Transformation on nodes or lists of nodes.
+    /// </summary>
+    public class Combiner : ACombiner<Node, NodeType, NodeData>
+    {
 
         /// <summary>
         /// Create a new combiner.
@@ -106,7 +111,7 @@ namespace APCSharp.Parser
     /// AST Transformation on generic nodes or lists of generic nodes.
     /// </summary>
     /// <typeparam name="TNode">Enum for custom node types</typeparam>
-    public class Combiner<TNode, TNodeType, TNodeData> : Combiner where TNode : ANode<TNode, TNodeType, TNodeData>
+    public class Combiner<TNode, TNodeType, TNodeData> : ACombiner<TNode, TNodeType, TNodeData> where TNode : ANode<TNode, TNodeType, TNodeData>, new()
         where TNodeType : struct
         where TNodeData : struct
     {
