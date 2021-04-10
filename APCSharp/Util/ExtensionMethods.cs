@@ -24,10 +24,12 @@ namespace APCSharp.Util
             return r.Remove(r.Length - 2) + "]";
         }
 
-        internal static TDest[] ArrayCast<TDest, TSource>(this TSource[] source) where TDest : TSource
+        internal static TDest[] ArrayCast<TDest, TSource>(this TSource[] source)
+            where TSource : ICastable<TDest>
+                where TDest : new()
         {
             TDest[] dest = new TDest[source.Length];
-            for (int i = 0; i < source.Length; i++) dest[i] = (TDest)source[i];
+            for (int i = 0; i < source.Length; i++) dest[i] = source[i].Cast();
             return dest;
         }
     }
