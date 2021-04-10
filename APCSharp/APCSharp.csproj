@@ -16,7 +16,7 @@ A library for building optimized and flexible parsers.</Description>
     <RepositoryUrl>https://github.com/WilliamRagstad/APCSharp</RepositoryUrl>
     <RepositoryType>GitHub</RepositoryType>
     <PackageTags>lexer, parser, parsing, language, tokenizer, lexical, semantic, analysis, compiler, combinator, another, APC#</PackageTags>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
