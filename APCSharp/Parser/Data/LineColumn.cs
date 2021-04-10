@@ -1,6 +1,6 @@
 ﻿namespace APCSharp.Parser.Data
 {
-    internal class LineColumn
+    public class LineColumn
     {
         public LineColumn(int line, int column)
         {
@@ -10,8 +10,14 @@
 
         public int Line { get; private set; }
         public int Column { get; private set; }
+        public long TotalChars { get; private set; }
 
-        public void NextColumn() => Column++;
+        public void NextColumn()
+        {
+            TotalChars++;
+            Column++;
+        }
+
         public void NextLine()
         {
             Column = 0;
@@ -22,6 +28,7 @@
         {
             Line = 0;
             Column = 0;
+            TotalChars = 0;
         }
 
         public override string ToString() => $"line {Line}, column {Column}";

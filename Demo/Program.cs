@@ -29,8 +29,7 @@ namespace Demo
                     Console.ForegroundColor = ConsoleColor.Cyan;
                     Console.WriteLine(result.AST.ToString());
                     Console.ForegroundColor = ConsoleColor.DarkGray;
-                    string remaining = result.Stream.ReadToEnd();
-                    Console.WriteLine($"Remaining ({remaining.Length}): '{remaining}'");
+                    Console.WriteLine($"Remaining ({result.Remaining.Length}): '{result.Remaining}'");
                 }
                 else
                 {
