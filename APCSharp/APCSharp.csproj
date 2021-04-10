@@ -20,7 +20,6 @@ A library for building optimized and flexible parsers.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\.editorconfig" Link=".editorconfig" />
     <None Include="..\assets\logo.png" Link="Package\logo_white_outline_transparent.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
