@@ -42,13 +42,11 @@ namespace APCSharp.Parser
         {
             get
             {
-                var tmp = new MemoryStream(new byte[Stream.BaseStream.Length - StoppedAt.TotalChars]); // Create buffer for all chars between the successfully parsed ones and the remaining in the stream
-                long p = Stream.BaseStream.Position; // Do this in case we for some reason would like to keep reading from the base stream afterwards
-                Stream.BaseStream.Position = StoppedAt.TotalChars; // Start copying data from the index of the last successful char
-                Stream.BaseStream.CopyTo(tmp);
+                long p = Stream.BaseStream.Position;
+                Stream.BaseStream.Position = StoppedAt.TotalChars;
+                string remaining = Stream.ReadToEnd();
                 Stream.BaseStream.Position = p;
-                tmp.Position = 0; // The position is updated when copied, so reset to be able to read from the stream
-                return new StreamReader(tmp).ReadToEnd();
+                return remaining;
             }
         }
 
