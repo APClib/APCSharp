@@ -103,27 +103,8 @@ namespace APCSharp.Parser
         /// Generates a list of one or more Nodes that match the parser.
         /// </summary>
         /// <returns></returns>
-        public ParserBuilder OneOrMore()
-        {
-            return FollowedBy(ZeroOrMore()); // One match of the current parser followed by zero or more is the same as one or more.
-            /*
-            return new ParserBuilder(s => {
-                Debug.Print("Looking for one or more " + GetMatchString());
-                PResult p = Func(s);
-                Node root = Node.List();
-                if (!p.Success) return p;
+        public ParserBuilder OneOrMore() => FollowedBy(ZeroOrMore()); // One match of the current parser followed by zero or more is the same as one or more.
 
-                while (p.Success)
-                {
-                    root.Children.Add(p.AST);
-                    if (s.EndOfStream) break;
-                    p = Func(s);
-                }
-                return PResult.Succeeded(root, s);
-            });
-            */
-        }
-        
         /// <summary>
         /// Expects the parser to be repeated n, number of times.
         /// </summary>
@@ -224,7 +205,11 @@ namespace APCSharp.Parser
         /// </summary>
         /// <returns></returns>
         public ParserBuilder ListToString() => ListToString(NodeType.String);
-
+        /// <summary>
+        /// Maps over a list of nodes and moves every node or child nodes into a new list.
+        /// </summary>
+        /// <returns></returns>
+        public ParserBuilder Flatten() => Map(Combiner.Flatten);
 
 
         private ParserBuilder MaybeMatch()
@@ -254,15 +239,17 @@ namespace APCSharp.Parser
         /// <returns></returns>
         public ParserBuilder Maybe() => MaybeMatch().RemoveEmptyMaybeMatches();
         /// <summary>
-        /// Match a any amount of whitespace
+        /// Match a any amount of trailing whitespace, this will be appended on the previous parsed result.
+        /// If you only want to allow trailing whitespaces, use IgnoredWhitespaces().
         /// </summary>
         /// <returns></returns>
-        public ParserBuilder AnyWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe().InfoBinder("any whitespaces");
+        public ParserBuilder AnyWhitespaces() => FollowedBy(Parser.WhiteSpaces).Maybe().ListToString().InfoBinder("any whitespaces");
+
         /// <summary>
         /// Match and ignore any amount of whitespace
         /// </summary>
         /// <returns></returns>
-        public ParserBuilder IgnoreAnyWhitespaces() => AnyWhitespaces().Map(Combiner.First, NodeType.List);
+        public ParserBuilder IgnoredWhitespaces() => FollowedBy(Parser.WhiteSpaces).Map(Combiner.First);
 
         public Parser Cast()
         {

@@ -70,7 +70,7 @@ namespace Demo
 
         internal static ParserBuilder ArrayParser =
             Parser.Char('[')
-            .IgnoreAnyWhitespaces()
+            .IgnoredWhitespaces()
             .FollowedBy(
                         Parser.AnyOf(
                             JsonNull.NullParser,
@@ -81,9 +81,9 @@ namespace Demo
                             // JSONArray.arrayParser
                         )
                     )
-                    .IgnoreAnyWhitespaces()
+                    .IgnoredWhitespaces()
                     .FollowedBy(Parser.Char(','))
-                    .IgnoreAnyWhitespaces()
+                    .IgnoredWhitespaces()
                     .OneOrMore()
                     .FollowedBy(Parser.Char(']'))
             .Or(Parser.Char(']'));
@@ -106,9 +106,9 @@ namespace Demo
                 Parser.Word,
                 Parser.Integer
             )
-            .IgnoreAnyWhitespaces()
+            .IgnoredWhitespaces()
             .FollowedBy(Parser.Char(':'))
-            .IgnoreAnyWhitespaces()
+            .IgnoredWhitespaces()
             .Map(Combiner.First, NodeType.String)
             .FollowedBy(
                 Parser.AnyOf(
@@ -123,12 +123,12 @@ namespace Demo
 
         internal static ParserBuilder ObjectParser =
             Parser.Char('{')
-                .IgnoreAnyWhitespaces()
+                .IgnoredWhitespaces()
                 // Key: Value, pairs
                 .FollowedBy(
                     KeyValueParser
                     .FollowedBy(Parser.Char(','))
-                    .IgnoreAnyWhitespaces()
+                    .IgnoredWhitespaces()
                 )
                 .ZeroOrMore().Maybe()
                 .FollowedBy(KeyValueParser)

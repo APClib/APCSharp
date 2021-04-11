@@ -85,6 +85,27 @@ namespace APCSharp.Parser
                 default: return string.Empty;
             }
         }
+        
+        /// <summary>
+        /// Takes a list of nodes and adds their child nodes to a new list if they have any, otherwise they are added to the list.
+        /// </summary>
+        public static readonly Combiner Flatten = new Combiner((n1, n2) =>
+        {
+            Node result = Node.List();
+            if (n1.Type == NodeType.List)
+            {
+                foreach (var node in n1.Children) result.Children.Add(node);
+            }
+            else if (n1.Type != NodeType.Empty) result.Children.Add(n1);
+            if (n2.Type == NodeType.List)
+            {
+                foreach (var node in n2.Children) result.Children.Add(node);
+            }
+            else if (n2.Type != NodeType.Empty) result.Children.Add(n2);
+
+            return result;
+        });
+
         /// <summary>
         /// Preset combiner that concatenates the two Nodes values to a string.
         /// </summary>
