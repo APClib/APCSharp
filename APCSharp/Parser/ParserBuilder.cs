@@ -239,31 +239,11 @@ namespace APCSharp.Parser
         /// <returns></returns>
         public ParserBuilder Maybe() => MaybeMatch().RemoveEmptyMaybeMatches();
         /// <summary>
-        /// Fallback parse result if parser threw an exception of a certain type
-        /// </summary>
-        /// <param name="whenFail"></param>
-        /// <returns></returns>
-        public ParserBuilder Try<T>(PResult whenFail)
-        where T : Exception
-        {
-            return new ParserBuilder(s =>
-            {
-                try
-                {
-                    return Func(s);
-                }
-                catch(T)
-                {
-                    return whenFail;
-                }
-            });
-        }
-        /// <summary>
         /// Generate parse result from custom function based on exception
         /// </summary>
         /// <param name="whenFail"></param>
         /// <returns></returns>
-        public ParserBuilder Try<T>(Func<T, PResult> whenFail)
+        public ParserBuilder Try<T>(Func<T, StreamReader, PResult> whenFail)
             where T : Exception
         {
             return new ParserBuilder(s =>
@@ -274,7 +254,7 @@ namespace APCSharp.Parser
                 }
                 catch(T e)
                 {
-                    return whenFail(e);
+                    return whenFail(e, s);
                 }
             });
         }
@@ -283,7 +263,7 @@ namespace APCSharp.Parser
         /// </summary>
         /// <param name="whenFail"></param>
         /// <returns></returns>
-        public ParserBuilder Try(PResult whenFail) => Try<Exception>(whenFail);
+        public ParserBuilder Try(Func<StreamReader, PResult> whenFail) => Try<Exception>((_, s) => whenFail(s));
         /// <summary>
         /// Match a any amount of trailing whitespace, this will be appended on the previous parsed result.
         /// If you only want to allow trailing whitespaces, use IgnoredWhitespaces().
