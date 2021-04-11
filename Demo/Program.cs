@@ -18,11 +18,15 @@ namespace Demo
             Parser underscoreParser = Parser.Char('_').InfoBinder("underscore '_'");
             Parser identifierParser =  Parser.AnyOf(Parser.Word, underscoreParser).FollowedBy(Parser.AnyOf(Parser.Word, underscoreParser, Parser.Integer).ZeroOrMore().ListToString()).ListToString().InfoBinder("variable identifier");
             
-            ParserBuilder expressionParser = null;
+            Parser expressionParser = null;
             expressionParser = Parser.AnyOf( 
                 Parser.Char('(').FollowedBy(Parser.Ref(() => expressionParser)).FollowedBy(Parser.Char(')')).Flatten().InfoBinder("parameterized expression"),
                 Parser.Integer
             );
+
+            Parser recursiveParen = null;
+            recursiveParen = Parser.Char('(').FollowedBy(Parser.Ref(() => recursiveParen)).FollowedBy(Parser.Char(')'))
+                .Flatten().Maybe();
 
             while (true)
             {
@@ -30,7 +34,7 @@ namespace Demo
                 Console.Write("LI> "); 
                 var expr = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(expr)) continue;
-                PResult result = expressionParser.Run(expr);
+                PResult result = recursiveParen.Run(expr);
                 if (result.Success)
                 {
                     Console.ForegroundColor = ConsoleColor.Cyan;

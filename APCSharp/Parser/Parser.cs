@@ -125,7 +125,7 @@ namespace APCSharp.Parser
         public static ParserBuilder Ref(Func<Parser> reference)
         {
             Parser p = null;
-            const int maxAccesses = 50;
+            const int maxAccesses = 500;
 
             return new ParserBuilder(s =>
             {
