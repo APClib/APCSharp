@@ -99,7 +99,6 @@ namespace Demo
             set => Value[key] = value;
         }
 
-        internal static ParserBuilder LazyObjectParser = Parser.Lazy(JSONObject.ObjectParser);
         internal static ParserBuilder KeyValueParser =
             Parser.AnyOf(
                 JsonString.StringParser,
@@ -134,6 +133,8 @@ namespace Demo
                 .FollowedBy(KeyValueParser)
                 .FollowedBy(Parser.Char('}'))
                 .Map(Combiner.First, NodeType.Object);
+
+        internal static ParserBuilder LazyObjectParser = Parser.Ref(() => JSONObject.ObjectParser);
         
         public static JSONObject Parse(string json)
         {
