@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime;
 using System.Text;
 using APCSharp.Info;
 using APCSharp.Parser.Data;
@@ -37,6 +38,7 @@ namespace APCSharp.Parser
         /// <returns></returns>
         public virtual TPResult Run(Stream sourceStream, Encoding encoding)
         {
+            SharedData.Memos.Clear();
             SharedData.LineColumn.Reset();
             return Func(new StreamReader(sourceStream, encoding));
         }
@@ -114,13 +116,35 @@ namespace APCSharp.Parser
 
 
         #region Preset Parsers
-        
+
         /// <summary>
-        /// Generate parser just in time. Allows for recursive calls and prevents stack overflows. 
+        /// Refer to another parser indirectly. This allows circular compile-time dependency between parsers.
         /// </summary>
-        /// <param name="parser">Parser to make lazy</param>
+        /// <param name="reference"></param>
         /// <returns></returns>
-        public static ParserBuilder Lazy(ParserBuilder parser) => new ParserBuilder(s => parser.Func(s));
+        public static ParserBuilder Ref(Func<Parser> reference)
+        {
+            Parser p = null;
+            const int maxAccesses = 50;
+
+            return new ParserBuilder(s =>
+            {
+                p ??= reference();
+                if (p == null) throw new ArgumentNullException(nameof(reference), "Generator function for referenced parser returned NULL!");
+
+                Memory m = Memory.Empty();
+                if (SharedData.Memos.ContainsKey(p))
+                {
+                    m = SharedData.Memos[p];
+                    if (m.IsLeftRecursive && m.Accesses > maxAccesses - 2) throw new AmbiguousImplementationException("Left recursion in the grammar.");
+                }
+
+                SharedData.Memos[p] = m.SetLeftRecursive();
+                var result = p.Func(s);
+                SharedData.Memos[p] = m.Result(result);
+                return result;
+            });
+        }
 
         /// <summary>
         /// Accepts character if in range of n and m and set a custom named NodeType.
@@ -134,7 +158,7 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("character in range " + n + " to " + m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
+                if (s.EndOfStream) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (c >= n && c <= m)
                 {
@@ -185,7 +209,7 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("character", m);
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
+                if (s.EndOfStream) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (c == m)
                 {
@@ -234,12 +258,12 @@ namespace APCSharp.Parser
             ParserBuilder parser = new ParserBuilder("characters but", nonAllowedChars.ArrayToString());
             parser.Func = s =>
             {
-                if (s.Peek() == -1) return PResult.EndOfInput(Error, parser);
+                if (s.EndOfStream) return PResult.EndOfInput(Error, parser);
                 char c = (char) s.Peek();
                 if (escapeChar == c)
                 {
                     s.Read(); // Consume escape character
-                    if (s.Peek() == -1) return PResult.EndOfInput(Error, parser); // Peek the escaped character
+                    if (s.EndOfStream) return PResult.EndOfInput(Error, parser); // Peek the escaped character
                     string escaped = c.ToString() + (char)s.Read(); // Read the escaped character and concatenate it with the escape character, e.g "\" + 'n' = "\n"
 
                     if (escapedCharMapping.ContainsKey(escaped))

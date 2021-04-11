@@ -44,8 +44,9 @@ namespace APCSharp.Parser
             {
                 long p = Stream.BaseStream.Position;
                 Stream.BaseStream.Position = StoppedAt.TotalChars;
+                Stream.DiscardBufferedData();
                 string remaining = Stream.ReadToEnd();
-                Stream.BaseStream.Position = p;
+                Stream.BaseStream.Position = StoppedAt.TotalChars;
                 return remaining;
             }
         }
