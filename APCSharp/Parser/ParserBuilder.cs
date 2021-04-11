@@ -264,6 +264,7 @@ namespace APCSharp.Parser
         /// <param name="whenFail"></param>
         /// <returns></returns>
         public ParserBuilder Try(Func<StreamReader, PResult> whenFail) => Try<Exception>((_, s) => whenFail(s));
+        public ParserBuilder Try() => Try(PResult.Corrupt);
         /// <summary>
         /// Match a any amount of trailing whitespace, this will be appended on the previous parsed result.
         /// If you only want to allow trailing whitespaces, use IgnoredWhitespaces().

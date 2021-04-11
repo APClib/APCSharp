@@ -104,6 +104,7 @@ namespace APCSharp.Parser
         /// </summary>
         /// <returns>Empty parse result</returns>
         public static PResult Empty(StreamReader stream) => Succeeded(Node.Empty, StreamReader.Null);
+        public static PResult Corrupt(StreamReader stream) => Failed(string.Empty, string.Empty, stream);
     }
 
     /// <summary>
