@@ -136,9 +136,9 @@ namespace Demo
 
         internal static ParserBuilder LazyObjectParser = Parser.Ref(() => JSONObject.ObjectParser);
         
-        public static JSONObject Parse(string json)
+        public static bool TryParse(string json, out JSONObject result)
         {
-            JSONObject result = new JSONObject();
+            result = new JSONObject();
             /*
             PResult pr = ObjectParser.Run(json);
             if (pr.Success) Console.WriteLine(pr);
@@ -152,7 +152,7 @@ namespace Demo
                 // result[n.Value] = n.Children;
             }
             */
-            return result;
+            return true;
         }
     }
 }
